@@ -161,7 +161,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <h2>Details</h2>
         <label>Name</label><input id="fName" placeholder="e.g. Sky Hook" maxlength="20">
         <div class="row" id="hlFields"><div style="flex:1"><label>Rarity</label><select id="fRar"><option value="rare">Rare · 49p</option><option value="epic" selected>Epic · 79p</option><option value="leg">Legendary · 99p</option></select></div>
-          <div style="flex:1"><label>Where</label><select id="fWhere"><option value="shop">Shop pool</option><option value="none">Held back</option></select></div></div>
+          <div style="flex:1"><label>Where</label><select id="fWhere"><option value="shop">Shop pool (to buy)</option><option value="none">Free for everyone</option></select></div></div>
         <div class="row" style="margin-top:10px"><button class="btn primary" id="save">💾 Save</button><button class="btn" id="export">📋 Copy code</button><button class="btn" id="png">🖼 PNG</button><button class="btn" id="dl">⬇ File</button></div>
         <div id="submitRow"><div class="row" style="margin-top:8px"><button class="btn go" id="submit">🚀 Submit to app</button><button class="btn" id="submitDraft">☁ Save draft to repo</button></div>
         <p class="note" style="margin:6px 0 0"><b>Submit to app</b> opens a ready-made GitHub issue: press <i>Submit new issue</i> and it's checked, added and live in about a minute. <b>Save draft to repo</b> keeps it in the repo without adding it to the app, so you can open it on any device.</p></div>
@@ -413,7 +413,7 @@ $('kStamp').onclick=()=>{if(N!==32)return toast('Stamping needs a 32×32 grid');
 // ---- start points ----
 function load(g){push();setGrid(clone(g));$('size').value=N;zReset();draw();palettes()}
 $('startEmpty').onclick=()=>{load(empty(+$('size').value));curId=null};
-$('startHead').onclick=()=>{load(gridOf[P.type]($('baseHead').value));curId=null;toast('Loaded: edit away, then save it under a new name')};
+$('startHead').onclick=()=>{const id=$('baseHead').value,L=libGet(id);load(gridOf[P.type](id));if(L)return editLib(L);notEditing();toast('Loaded: edit away, then save it under a new name')};
 
 // ---- image import: crop to the subject, shrink to the grid, snap colours, tidy ----
 $('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{load(fromImage(img,+$('size').value));curId=null;toast('Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
@@ -440,6 +440,14 @@ const slug=s=>{const t=String(s).toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0
 const idFor=name=>curId&&name===curName&&/^[a-z0-9]{2,20}$/.test(curId)?curId:slug(name);
 // Ids taken by the app's built-in heads (the intake rejects them). Studio-made heads in the library can be replaced, so they don't count.
 const libHas=id=>!!LIB&&LIB.some(x=>(x.type||'head')===P.type&&x.id===id);
+const libGet=id=>LIB&&LIB.find(x=>x.type===P.type&&x.id===id);
+// Loading one of your own library items opens it for editing: same id, name, rarity and where, so Submit updates it in the app.
+let lastEdit='';// name filled in by editLib, cleared again when you move on to something that isn't yours
+function notEditing(){if(lastEdit&&$('fName').value===lastEdit)$('fName').value='';lastEdit='';curId=null;curName=''}
+function editLib(L){curId=L.id;curName=L.name;lastEdit=L.name;$('fName').value=L.name;$('fRar').value=L.rarity||'epic';$('fWhere').value=L.where||'shop';
+  toast(`Editing ${L.name}: submit with the same name to update it in the app`)}
+const yours=id=>libGet(id)?' (yours, editable)':'';
+function startOptions(){const v=$('baseHead').value;$('baseHead').innerHTML=lists[P.type]().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}${yours(h.id)}</option>`).join('');if(v)$('baseHead').value=v}
 const HIDDEN_IDS={kit:['scout']};// ids the app keeps for itself though they aren't cosmetics
 const builtIn=id=>(HIDDEN_IDS[P.type]||[]).includes(id)||!!(ART&&lists[P.type]&&LIB&&lists[P.type]().some(h=>h.id===id)&&!libHas(id));
 function encode(){if(P.mode==='form')return encodeForm();const cols=[...new Set(grid.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -456,7 +464,7 @@ const store=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(_){r
 const keep=l=>{try{localStorage.setItem(KEY,JSON.stringify(l))}catch(_){toast('Could not save in this browser')}};
 const foldersOf=()=>{let f=[];try{f=JSON.parse(localStorage.getItem(KEY+'.folders'))||[]}catch(_){}return[...new Set(['Unsorted',...f,...store().map(d=>d.folder||'Unsorted')])]};
 function saveFolders(f){try{localStorage.setItem(KEY+'.folders',JSON.stringify(f))}catch(_){}}
-const meta=d=>P.fields?`${d.rarity} · ${d.where==='shop'?'Shop pool':'held back'}`:`${d.px.length}×${d.px.length}`;
+const meta=d=>P.fields?`${d.where==='shop'?d.rarity+' · Shop pool':'Free for everyone'}`:`${d.px.length}×${d.px.length}`;
 const thumb=d=>{try{if(P.mode==='form')return formThumb(decodeForm(d));return svgOf(decode(d))}catch(_){return ''}};
 function list(){const all=store(),F=foldersOf();
   $('folders').innerHTML=['All',...F].map(f=>`<button class="chip ${folder===f?'on':''}" data-f="${esc(f)}">${esc(f)} ${f==='All'?all.length:all.filter(d=>(d.folder||'Unsorted')===f).length}</button>`).join('');
@@ -596,26 +604,27 @@ function renderForm(){const box=$('formBody');$('formTitle').textContent=P.type=
   if(P.type==='kit')return renderKit(box);renderPbg(box)}
 function renderKit(box){const K=lists.kit(),f=FORM,pats=ART.kitPatterns||[...new Set(K.map(k=>k.pat))],fonts=ART.kitFonts||[...new Set(K.map(k=>k.font).filter(Boolean))];
   const col=(k,l)=>`<div><label>${l}</label><div class="fcol"><input type="color" data-k="${k}" value="${f[k]||'#ffffff'}"><span class="note">${f[k]||''}</span></div></div>`;
-  box.innerHTML=`<label>Start from</label><select id="fmBase">${K.map(k=>`<option value="${esc(k.id)}">${esc(k.n||k.id)}</option>`).join('')}</select>
+  box.innerHTML=`<label>Start from</label><select id="fmBase">${K.map(k=>`<option value="${esc(k.id)}">${esc(k.n||k.id)}${yours(k.id)}</option>`).join('')}</select>
     <div class="two">${col('b','Shirt')}${col('t','Trim')}${col('num','Number')}
       <div><label>Number outline</label><div class="fcol"><input type="checkbox" id="fmNs" ${f.ns?'checked':''} aria-label="Number outline on"><input type="color" data-k="ns" value="${f.ns||'#000000'}" ${f.ns?'':'disabled'}></div></div>
       <div><label>Pattern</label><select data-k="pat">${pats.map(x=>`<option ${x===f.pat?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
       <div><label>Number font</label><select data-k="font"><option value="">Standard</option>${fonts.filter(Boolean).map(x=>`<option value="${esc(x)}" ${x===f.font?'selected':''}>${esc(fontName(x))}</option>`).join('')}</select></div></div>
     <p class="note" style="margin:8px 0 0"><b>Start from</b> copies an existing kit's settings. Change the colours, pattern and number style, and the preview shows it exactly as the app draws it.</p>`;
   $('fmBase').value=K.some(k=>k.id===f.from)?f.from:K[0].id;
-  $('fmBase').onchange=e=>{const k=K.find(x=>x.id===e.target.value);FORM={...pickKit(k),from:k.id};renderForm();preview();wipLater()};
+  $('fmBase').onchange=e=>{const k=K.find(x=>x.id===e.target.value),L=libGet(k.id);FORM={...pickKit(L||k),from:k.id};if(L)editLib(L);else notEditing();renderForm();preview();wipLater()};
   box.querySelectorAll('[data-k]').forEach(el=>el.oninput=()=>{const k=el.dataset.k,v=el.value;if(v)FORM[k]=v;else delete FORM[k];
     if(k==='font'&&!v)delete FORM.fw;if(el.type==='color')el.nextElementSibling&&(el.nextElementSibling.textContent=v);preview();wipLater()});
   $('fmNs').onchange=e=>{const c=box.querySelector('[data-k="ns"]');c.disabled=!e.target.checked;if(e.target.checked){FORM.ns=c.value;if(!FORM.sw)FORM.sw=3}else{delete FORM.ns;delete FORM.sw}preview();wipLater()}}
-function renderPbg(box){const B=lists.pbg().filter(b=>!b.base),f=FORM,base=pbgBase(f.base)||B[0];if(!pbgBase(f.base))f.base=base.id;
+function renderPbg(box){const B=lists.pbg().filter(b=>!b.base),C=lists.pbg().filter(b=>b.base&&libGet(b.id)),f=FORM,base=pbgBase(f.base)||B[0];if(!pbgBase(f.base))f.base=base.id;
   const slots=[...new Set((base.bg.match(HEXRE)||[]).map(normHex))];
-  box.innerHTML=`<label>Start from</label><select id="fmBase">${B.map(b=>`<option value="${esc(b.id)}" ${b.id===f.base?'selected':''}>${esc(b.n||b.id)}</option>`).join('')}</select>
+  const sel=f.from&&C.some(c=>c.id===f.from)?'mine:'+f.from:f.base;
+  box.innerHTML=`<label>Start from</label><select id="fmBase"><optgroup label="Backgrounds">${B.map(b=>`<option value="${esc(b.id)}" ${b.id===sel?'selected':''}>${esc(b.n||b.id)}</option>`).join('')}</optgroup>${C.length?`<optgroup label="Yours (editable)">${C.map(c=>`<option value="mine:${esc(c.id)}" ${'mine:'+c.id===sel?'selected':''}>${esc(c.n||c.id)}</option>`).join('')}</optgroup>`:''}</select>
     <label>Colours</label>${slots.length?`<div class="slots">${slots.map(h=>{const now=(f.colors[h]||h.slice(0,7));
       return`<div class="slot ${f.colors[h]?'ch':''}"><span class="old" style="background:${h}" title="Original"></span><input type="color" data-h="${h}" value="${now.slice(0,7)}" aria-label="Colour ${h}"><span>${now.slice(0,7)}${h.length===9?' · see-through':''}</span></div>`}).join('')}</div>`
       :'<p class="note" style="margin:0">This background has no colours to change: it uses the atmosphere\'s colours.</p>'}
     <div class="row" style="margin-top:10px"><button class="btn" id="fmReset">Reset colours</button></div>
     <p class="note" style="margin:8px 0 0">Each swatch is a colour in the starting background. Change any of them: the layout, texture and any animation stay exactly as they are. The small square shows the original.</p>`;
-  $('fmBase').onchange=e=>{FORM={base:e.target.value,colors:{}};renderForm();preview();wipLater()};
+  $('fmBase').onchange=e=>{const v=e.target.value;if(v.startsWith('mine:')){const L=libGet(v.slice(5));FORM={base:L.base,colors:{...L.colors},from:L.id};editLib(L)}else{FORM={base:v,colors:{}};notEditing()}renderForm();preview();wipLater()};
   $('fmReset').onclick=()=>{FORM.colors={};renderForm();preview();wipLater()};
   // A see-through colour keeps its transparency: the new colour is saved with the original alpha (#rrggbbaa), which the app swaps in exactly.
   box.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{const h=el.dataset.h;if(el.value.toLowerCase()===h.slice(0,7))delete FORM.colors[h];else FORM.colors[h]=el.value.toLowerCase()+(h.length===9?h.slice(7):'');
@@ -670,7 +679,7 @@ function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]
   $('fName').placeholder={head:'e.g. Sky Hook',logo:'e.g. Thunder',kit:'e.g. Midnight Gold',pbg:'e.g. Toxic Flames'}[P.type]||'e.g. Club badge';
   $('size').innerHTML=(P.sizes||[32]).map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=(P.sizes||[]).length<2;
   $('baseHead').innerHTML=starts.map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(P.type==='head'&&ART&&ART.parts&&ART.build)setupKit();
-  LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>({type:x.type||'head',id:x.id}))}).catch(()=>{});
+  LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>({...x,type:x.type||'head'}));if(P.mode==='form'&&FORM)renderForm();else if(!$('headStart').hidden)startOptions()}).catch(()=>{});
   hist=[];fut=[];curId=null;curName='';FORM=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';$('pvBig').style.cssText='';
   const sizes=P.sizes||[32],back=wipRestore();
   if(back==='none'&&pix)setGrid(P.type==='head'&&ART&&ART.base?ART.base(2,'std'):empty(sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}

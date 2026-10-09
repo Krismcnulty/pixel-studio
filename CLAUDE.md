@@ -49,6 +49,8 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - The design in progress autosaves to `<key>.wip` (from `draw()` or a form change, debounced, and on pagehide). Pixel tabs save the grid; form tabs save `FORM`. `openProject` and `openKind` flush the old save before switching.
   - The last tab used is kept in `pixelStudio.v1.<project>.kind`.
   - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.
+- **Where.** In the app, `where:'shop'` puts an item in the Item Shop pool (bought at its rarity's price); `where:'none'` makes it **free for every player** (the app only locks shop, pack, event and achievement items). There is no hidden option yet; that needs a Habit League change.
+- **Editing your own items.** "Start from" lists include your library items, marked "(yours, editable)" (backgrounds under "Yours"). Loading one calls `editLib()`: it keeps the id, name, rarity and where, so Submit updates it in the app (after a confirm). Loading anything else calls `notEditing()`, which clears that name so a built-in can't accidentally replace your item.
 - **Submit to app / Save draft to repo** open a prefilled GitHub issue on the project's repo, labelled `art` or `art-draft`.
   - That repo's action (`.github/workflows/art.yml` plus `tools/art-intake.js`, both in the Habit League repo) validates the design, commits it to `art/library.json` or `art/drafts.json`, replies with a preview and closes the issue.
   - Any change to the design format must stay compatible with `art-intake.js`.
