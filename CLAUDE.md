@@ -15,6 +15,9 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
     - `base(skin, shape)` and `build(parts)`
     - the `skins`, `hairs`, `shapes` and `parts` lists
   - This only works because every app is on the same origin (krismcnulty.github.io).
+  - The engine page is fetched and run via `srcdoc` with a guard script that gives it in-memory `localStorage` and no service worker. Keep this: the app saves on every render and re-renders every minute, so an unguarded hidden copy overwrites real progress made in the app.
+  - Only `svg` is required; the parts kit appears when the engine has both `build` and `parts`.
+- **Ids** are 2 to 20 lowercase letters or numbers. An opened design keeps its id only while its name is unchanged, so renaming makes a new design. Names that belong to the app's built-in heads (in `HL_ART.heads()` but not in `art/library.json`) are blocked, because the intake rejects them.
   - The API is defined in the Habit League repo (`Krismcnulty/habit-league`, `index.html`, search `HL_ART`). Change both sides together.
   - Without an engine, `basicSvg()` renders the preview.
 - **Designs** are JSON shaped like `{type, id, name, pal:{letter:hex}, px:[rows]}`.
