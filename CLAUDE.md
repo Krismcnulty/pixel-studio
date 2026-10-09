@@ -50,6 +50,9 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - The last tab used is kept in `pixelStudio.v1.<project>.kind`.
   - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.
 - **Where.** In the app, `where:'shop'` puts an item in the Item Shop pool (bought at its rarity's price); `where:'none'` makes it **free for every player** (the app only locks shop, pack, event and achievement items). There is no hidden option yet; that needs a Habit League change.
+- **Unlock status.** `HL_ART.unlockInfo(type, id)` describes how an item is unlocked in the app ("Free for everyone", "Item Shop (rare)", "Reward: …", "Store pack: …", "Event: …"). `unlockNote()` shows it under Rarity/Where whenever one of your library items is open.
+  - All 16 team logos and 12 kits that came with the app now live in `art/library.json` (Habit League v204). Their unlock rules stay in the app's code by id, so `where` and `rarity` are ignored for them: only the artwork and name update.
+  - `HL_ART.ready` is a promise that resolves once the app's library has loaded; `logos()` and `kits()` are empty until then, so `openProject()` waits for it (up to 8 seconds).
 - **Editing your own items.** "Start from" lists include your library items, marked "(yours, editable)" (backgrounds under "Yours"). Loading one calls `editLib()`: it keeps the id, name, rarity and where, so Submit updates it in the app (after a confirm). Loading anything else calls `notEditing()`, which clears that name so a built-in can't accidentally replace your item.
 - **Submit to app / Save draft to repo** open a prefilled GitHub issue on the project's repo, labelled `art` or `art-draft`.
   - That repo's action (`.github/workflows/art.yml` plus `tools/art-intake.js`, both in the Habit League repo) validates the design, commits it to `art/library.json` or `art/drafts.json`, replies with a preview and closes the issue.

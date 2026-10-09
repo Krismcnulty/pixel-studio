@@ -162,6 +162,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <label>Name</label><input id="fName" placeholder="e.g. Sky Hook" maxlength="20">
         <div class="row" id="hlFields"><div style="flex:1"><label>Rarity</label><select id="fRar"><option value="rare">Rare · 49p</option><option value="epic" selected>Epic · 79p</option><option value="leg">Legendary · 99p</option></select></div>
           <div style="flex:1"><label>Where</label><select id="fWhere"><option value="shop">Shop pool (to buy)</option><option value="none">Free for everyone</option></select></div></div>
+        <p class="note" id="unlockNote" hidden style="margin:8px 0 0"></p>
         <div class="row" style="margin-top:10px"><button class="btn primary" id="save">💾 Save</button><button class="btn" id="export">📋 Copy code</button><button class="btn" id="png">🖼 PNG</button><button class="btn" id="dl">⬇ File</button></div>
         <div id="submitRow"><div class="row" style="margin-top:8px"><button class="btn go" id="submit">🚀 Submit to app</button><button class="btn" id="submitDraft">☁ Save draft to repo</button></div>
         <p class="note" style="margin:6px 0 0"><b>Submit to app</b> opens a ready-made GitHub issue: press <i>Submit new issue</i> and it's checked, added and live in about a minute. <b>Save draft to repo</b> keeps it in the repo without adding it to the app, so you can open it on any device.</p></div>
@@ -443,8 +444,12 @@ const libHas=id=>!!LIB&&LIB.some(x=>(x.type||'head')===P.type&&x.id===id);
 const libGet=id=>LIB&&LIB.find(x=>x.type===P.type&&x.id===id);
 // Loading one of your own library items opens it for editing: same id, name, rarity and where, so Submit updates it in the app.
 let lastEdit='';// name filled in by editLib, cleared again when you move on to something that isn't yours
-function notEditing(){if(lastEdit&&$('fName').value===lastEdit)$('fName').value='';lastEdit='';curId=null;curName=''}
-function editLib(L){curId=L.id;curName=L.name;lastEdit=L.name;$('fName').value=L.name;$('fRar').value=L.rarity||'epic';$('fWhere').value=L.where||'shop';
+function notEditing(){if(lastEdit&&$('fName').value===lastEdit)$('fName').value='';lastEdit='';curId=null;curName='';unlockNote(null)}
+// How the item is unlocked in the app right now. Items that came with the app keep their own rules (rewards, packs, events), so Rarity and Where don't change them.
+function unlockNote(id){const el=$('unlockNote');let t='';try{if(id&&has('unlockInfo'))t=ART.unlockInfo(P.type,id)}catch(_){}
+  el.hidden=!t;if(!t)return;const own=/^(Free for everyone|Item Shop)/.test(t);
+  el.innerHTML=`In the app now: <b>${esc(t)}</b>.${own?'':' This is set by the app, so Rarity and Where won\'t change it: only the artwork updates.'}`}
+function editLib(L){curId=L.id;curName=L.name;lastEdit=L.name;$('fName').value=L.name;$('fRar').value=L.rarity||'epic';$('fWhere').value=L.where||'shop';unlockNote(L.id);
   toast(`Editing ${L.name}: submit with the same name to update it in the app`)}
 const yours=id=>libGet(id)?' (yours, editable)':'';
 function startOptions(){const v=$('baseHead').value;$('baseHead').innerHTML=lists[P.type]().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}${yours(h.id)}</option>`).join('');if(v)$('baseHead').value=v}
@@ -477,9 +482,9 @@ function list(){const all=store(),F=foldersOf();
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this design?'))return;const l=store();l.splice(+b.dataset.del,1);keep(l);list()})}
 function openD(d){if(d&&d.type&&P.kinds&&d.type!==P.type)return toast(`That's a ${TYPE_NAMES[d.type]||d.type}: open its tab first`);
   if(P.mode==='form'){FORM=decodeForm(d);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop';
-    renderForm();preview();wipLater();$('code').value=JSON.stringify(strip(d));return}
+    renderForm();preview();wipLater();$('code').value=JSON.stringify(strip(d));unlockNote(libGet(d.id)?d.id:null);return}
   const g=decode(d);if(P.sizes.length===1&&g.length!==P.sizes[0])return toast(`${P.note||'Designs'} here must be ${P.sizes[0]}×${P.sizes[0]}`);
-  load(g);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';
+  load(g);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';unlockNote(libGet(d.id)?d.id:null);
   if(P.fields){$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop'}
   if(P.outline==='toggle'){$('outline').checked=d.outline!==false;draw()}
   $('code').value=JSON.stringify(strip(d))}
@@ -667,6 +672,7 @@ async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-leag
   $('proj').value=PID;$('projNote').textContent=P.note;$('ui').hidden=true;$('loading').hidden=false;$('banner').hidden=true;
   $('loading').textContent=P.engine?`Loading ${P.name}'s drawing engine…`:'Loading…';
   ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];if(ART)engineFonts(P.engine);
+    if(ART&&ART.ready){$('loading').textContent=`Loading ${P.name}'s cosmetics…`;try{await Promise.race([ART.ready,new Promise(r=>setTimeout(r,8000))])}catch(_){}}
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
   let k=null;if(P.kinds){try{k=localStorage.getItem(`${BASE_KEY}.${PID}.kind`)}catch(_){}if(!KINDS[k]||KINDS[k].soon)k=P.defaultKind}
   openKind(k)}
@@ -683,7 +689,7 @@ function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]
   $('size').innerHTML=(P.sizes||[32]).map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=(P.sizes||[]).length<2;
   $('baseHead').innerHTML=starts.map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(P.type==='head'&&ART&&ART.parts&&ART.build)setupKit();
   LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>({...x,type:x.type||'head'}));if(P.mode==='form'&&FORM)renderForm();else if(!$('headStart').hidden)startOptions()}).catch(()=>{});
-  hist=[];fut=[];curId=null;curName='';FORM=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';$('pvBig').style.cssText='';
+  hist=[];fut=[];curId=null;curName='';FORM=null;lastEdit='';unlockNote(null);folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';$('pvBig').style.cssText='';
   const sizes=P.sizes||[32],back=wipRestore();
   if(back==='none'&&pix)setGrid(P.type==='head'&&ART&&ART.base?ART.base(2,'std'):empty(sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}
   $('size').value=N;zReset();$('swapBox').hidden=P.type!=='head';if(P.type==='head')setupSwap();
