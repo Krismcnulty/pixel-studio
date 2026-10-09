@@ -1,0 +1,39 @@
+# Pixel Studio: notes for Claude
+
+Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (GitHub Pages, branch `main`, root).
+
+## Shape of the code
+
+- Everything is in `index.html`: plain HTML/CSS/JS, no build step and no dependencies. Keep it that way unless Kris asks otherwise.
+- `PROJECTS` at the top of the script lists the apps the studio makes art for:
+  - `habit-league` draws player heads with Habit League's own code.
+  - `sketchbook` is free drawing at 16 to 64 pixels, for football badges, kits and ideas.
+- **Engine.** A project with `engine` loads that app in a hidden iframe and reads `window.HL_ART`.
+  - What the engine provides:
+    - `svg(grid)` and `headGrid(id)`
+    - `heads()`
+    - `base(skin, shape)` and `build(parts)`
+    - the `skins`, `hairs`, `shapes` and `parts` lists
+  - This only works because every app is on the same origin (krismcnulty.github.io).
+  - The API is defined in the Habit League repo (`Krismcnulty/habit-league`, `index.html`, search `HL_ART`). Change both sides together.
+  - Without an engine, `basicSvg()` renders the preview.
+- **Designs** are JSON shaped like `{type, id, name, pal:{letter:hex}, px:[rows]}`.
+  - Heads add `rarity` (`rare`/`epic`/`leg`) and `where` (`shop`/`none`), and must be 32×32 with no drawn outline (the app adds it).
+  - Sketchbook designs are `type:'sprite'` with an `outline` boolean.
+- **Storage** is localStorage `pixelStudio.v1.<project>`, with folders in `pixelStudio.v1.<project>.folders`.
+  - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.
+- **Submit to app / Save draft to repo** open a prefilled GitHub issue on the project's repo, labelled `art` or `art-draft`.
+  - That repo's action (`.github/workflows/art.yml` plus `tools/art-intake.js`, both in the Habit League repo) validates the design, commits it to `art/library.json` or `art/drafts.json`, replies with a preview and closes the issue.
+  - Any change to the design format must stay compatible with `art-intake.js`.
+
+## Related
+
+- The original HL Studio (`/habit-league/studio.html` in the Habit League repo) stays as it is for now. Kris plans to switch to this one eventually.
+- The art style rules are in the claude.ai project doc "Pixel Art Guide": 32×32, lit from the top left, five skin tones, three hair tones, no shoulders, original characters only.
+- A football version of Habit League is planned. When it exists, it gets its own repo and a new `PROJECTS` entry here (see README).
+
+## Working rules
+
+- Test with Playwright before pushing. Serve a folder that holds both repos side by side so the engine path `/habit-league/index.html` resolves, e.g. symlinks `site/habit-league` and `site/pixel-studio`, then `python3 -m http.server`.
+- Check desktop (1400 wide) and phone (390 wide).
+- Commit and push to `main` when a change is done.
