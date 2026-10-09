@@ -138,7 +138,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <textarea id="aiDesc" style="min-height:64px;font:inherit" placeholder="e.g. a zombie with grey-green skin, stitches and a torn ear"></textarea>
         <label class="chk"><input type="checkbox" id="aiBase" checked> Start from my current drawing</label>
         <div id="aiHeadOpts"><label>Match the style of</label><select id="aiStyle"></select>
-          <label class="chk"><input type="checkbox" id="aiSnap" checked> Snap the result to the game palette</label></div>
+          <label class="chk"><input type="checkbox" id="aiSnap" checked> Tidy colours that are close to the game palette</label></div>
         <div class="row" style="margin-top:10px"><button class="btn primary" id="aiCopy">✨ Copy AI prompt</button><a class="btn" id="aiOpen" href="https://claude.ai/new" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text);display:inline-block">Open Claude ↗</a><button class="btn" id="aiPaste">📥 Paste result</button></div>
         <p class="note" style="margin:6px 0 0"><b>1.</b> Describe it and press <b>Copy AI prompt</b>. <b>2.</b> Paste the prompt into Claude and send it. <b>3.</b> Copy Claude's reply, come back and press <b>Paste result</b>. Starting from a drawing (an imported image, an existing head or a logo) gives much better results than starting from nothing.</p>
       </div>
@@ -159,7 +159,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
       </div>
       <div class="card" id="startCard">
         <h2>Start from</h2>
-        <div class="row"><select id="size" style="width:auto"></select><button class="btn" id="startEmpty">Empty grid</button><button class="btn" id="dbl" hidden>⤢ Double to 64×64</button></div>
+        <div class="row"><select id="size" style="width:auto"></select><button class="btn" id="startEmpty">Empty grid</button><button class="btn" id="dbl" hidden>⤢ Double to 64×64</button><button class="btn primary" id="labReset" hidden>↺ Reset to Afroman</button></div>
         <div id="headStart"><label id="startLabel">An existing head</label>
         <div class="row"><select id="baseHead" style="flex:1"></select><button class="btn" id="startHead">Load</button></div></div>
         <label>An image (AI art, a drawing or a photo)</label>
@@ -176,6 +176,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <div class="row" id="hlFields"><div style="flex:1"><label>Rarity</label><select id="fRar"><option value="rare">Rare · 49p</option><option value="epic" selected>Epic · 79p</option><option value="leg">Legendary · 99p</option></select></div>
           <div style="flex:1"><label>Where</label><select id="fWhere"><option value="shop">Shop pool (to buy)</option><option value="none">Free for everyone</option></select></div></div>
         <p class="note" id="unlockNote" hidden style="margin:8px 0 0"></p>
+        <div class="row" id="labRow" hidden style="margin-top:10px"><button class="btn go" id="toHeads">➜ Use in Player Heads</button></div>
         <div class="row" style="margin-top:10px"><button class="btn primary" id="save">💾 Save</button><button class="btn" id="export">📋 Copy code</button><button class="btn" id="png">🖼 PNG</button><button class="btn" id="dl">⬇ File</button></div>
         <div id="submitRow"><div class="row" style="margin-top:8px"><button class="btn go" id="submit">🚀 Submit to app</button><button class="btn" id="submitDraft">☁ Save draft to repo</button></div>
         <p class="note" style="margin:6px 0 0"><b>Submit to app</b> opens a ready-made GitHub issue: press <i>Submit new issue</i> and it's checked, added and live in about a minute. <b>Save draft to repo</b> keeps it in the repo without adding it to the app, so you can open it on any device.</p></div>
@@ -216,6 +217,10 @@ const PROJECTS={
   'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
     cvNote:'Free drawing at any size. Turn Auto outline on for a dark 1-pixel outline like the game art. Mirror copies each pixel to the other side. Right-click erases on a computer.',
     pvTitle:'Preview',pvNote:'Small size'},
+  'headlab':{name:'Head Lab',note:'Afroman is the base: change one thing at a time. Nothing goes to the app until you send it to Player Heads.',type:'head',sizes:[64],outline:'always',fields:false,lab:true,
+    engine:'/habit-league/index.html',
+    cvNote:'Afroman is the starting point for every new head. Change one thing at a time (by hand, with Swap skin, or with Describe it), then press Use in Player Heads to name it and submit it. Reset to Afroman starts again.',
+    pvTitle:'Preview (as the app draws it)',cardPx:68,cardBorder:2,cardScale:2,pvNote:'Exactly as on a player card in the app, next to existing heads'},
   'test':{name:'Testing area',note:'Try ideas at 32, 48 or 64 pixels. Nothing here goes to an app.',type:'sprite',sizes:[32,48,64],outline:'toggle',fields:false,compare:true,
     cvNote:'A place to experiment. Upload an image under Start from to see it at 32×32, 48×48 and 64×64 side by side, then edit whichever size you like. Auto outline adds the dark outline the game uses.',
     pvTitle:'Preview',pvNote:'Card size (68px) and profile size (134px), as in Habit League',cardPx:68,cardBorder:2}
@@ -608,7 +613,18 @@ $('aiStyle').addEventListener('focus',setupStyle);
 function styleRef(){const v=$('aiStyle').value;if(!v||v==='none')return'';if(v==='builtin')return JSON.stringify(STYLE_REF);
   try{const g=ART.headGrid(v),cols=[...new Set(g.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',pal={},inv={};
     cols.forEach((c,i)=>{pal[L[i]]=c;inv[c]=L[i]});return JSON.stringify({pal,px:g.map(r=>r.map(c=>c?inv[c]:'.').join(''))})}catch(_){return JSON.stringify(STYLE_REF)}}
-function aiPrompt(desc){const n=N,head=P.type==='head',logo=P.type==='logo',old=head&&n===32,base=$('aiBase').checked&&grid.flat().some(Boolean);
+const labBase=()=>{const g=STYLE_REF.px.map(r=>[...r].map(c=>c==='.'?null:STYLE_REF.pal[c]));return g};
+function labPrompt(desc){let cur='';try{const d=encode();cur=JSON.stringify({pal:d.pal,px:d.px})}catch(_){}
+  return [`This is a 64×64 pixel-art basketball player head from my game Habit League. Make this change to it: ${desc}.`,
+    `\nKeep everything else exactly as it is: the same size, position, angle, head shape, outline, art style and level of detail. Change only the pixels the change needs and copy every other pixel unchanged. Don't redraw the head.`,
+    `\nColours: keep the existing colours wherever nothing changes. For new things, pick colours that suit them (for example greens for zombie skin, reds for a wound) and shade them the same way the head is shaded: lighter on the top left, darker on the right and underneath.`,
+    `\nThe head (each string is one row; "." is empty, every other character is a key into "pal"):\n${cur}`,
+    `\nReply with only the finished head as one line of JSON in a code block, in exactly this shape:\n{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[64 strings of 64 characters]}\nCount every row: exactly 64 rows of exactly 64 characters.`].join('\n')}
+$('labReset').onclick=()=>{load(labBase());curId=null;curName='';$('fName').value='';toast('Back to Afroman')};
+$('toHeads').onclick=()=>{if(!grid.flat().some(Boolean))return toast('Nothing to send yet');wipSave();
+  try{localStorage.setItem(`${BASE_KEY}.habit-league.wip`,JSON.stringify({g:grid,name:$('fName').value,id:null,cn:'',rar:'epic',where:'shop',f:'Unsorted',t:Date.now()}));localStorage.setItem(`${BASE_KEY}.habit-league.kind`,'head')}catch(_){}
+  $('proj').value='habit-league';openProject('habit-league').then(()=>toast('In Player Heads: give it a name, check Where, then submit'))};
+function aiPrompt(desc){if(P.lab)return labPrompt(desc);const n=N,head=P.type==='head',logo=P.type==='logo',old=head&&n===32,base=$('aiBase').checked&&grid.flat().some(Boolean);
   let cur='';if(base){try{const d=encode();cur=JSON.stringify({pal:d.pal,px:d.px})}catch(_){}}
   const ref=head&&!old?styleRef():'';
   const shape=head?`{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[${n} strings of ${n} characters]}`
@@ -634,7 +650,7 @@ function loadText(t,fromAi){let d;try{const a=t.indexOf('{'),b=t.lastIndexOf('}'
   const pal={};for(const [k,v] of Object.entries(d.pal))if(k.length===1&&k!=='.'&&/^#[0-9a-fA-F]{6}$/.test(v))pal[k]=v.toLowerCase();
   // Heads: snap the AI's colours to the game palette (as Snap to the palette does for images), so every head shares the same colours.
   if(fromAi&&P.type==='head'&&$('aiSnap').checked){const PAL=palGroups().flatMap(g=>g[1]).map(h=>[h,rgb(h)]);
-    for(const k in pal){let best=pal[k],bd=1e9;for(const [h,c] of PAL){const dd=cdist(rgb(pal[k]),c);if(dd<bd){bd=dd;best=h}}pal[k]=best}}
+    for(const k in pal){let best=pal[k],bd=1e9;for(const [h,c] of PAL){const dd=cdist(rgb(pal[k]),c);if(dd<bd){bd=dd;best=h}}if(bd<45)pal[k]=best}}// far-off colours (zombie green, say) are kept
   const rows=d.px.map(r=>String(r)),want=Math.max(rows.length,...rows.map(r=>r.length));
   const asc=[...P.sizes].sort((a,b)=>a-b),n=asc.find(s=>s>=want)||asc[asc.length-1];let fixed=0;
   const px=Array.from({length:n},(_,y)=>{let r=rows[y]||'';if(r.length!==n||!rows[y])fixed++;r=(r+'.'.repeat(n)).slice(0,n);return[...r].map(c=>c in pal?c:'.').join('')});
@@ -761,7 +777,7 @@ function engineFonts(src){if(document.getElementById('engineFonts'))return;const
 async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID];KEY=`${BASE_KEY}.${PID}`;try{localStorage.setItem(BASE_KEY+'.project',PID)}catch(_){}
   $('proj').value=PID;$('projNote').textContent=P.note;$('ui').hidden=true;$('loading').hidden=false;$('banner').hidden=true;
   $('loading').textContent=P.engine?`Loading ${P.name}'s drawing engine…`:'Loading…';
-  ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];if(ART)engineFonts(P.engine);
+  ART=null;if(P.engine){if(!(P.engine in engines))engines[P.engine]=loadEngine(P.engine);ART=await engines[P.engine];if(ART)engineFonts(P.engine);
     if(ART&&ART.ready){$('loading').textContent=`Loading ${P.name}'s cosmetics…`;try{await Promise.race([ART.ready,new Promise(r=>setTimeout(r,8000))])}catch(_){}}
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
   let k=null;if(P.kinds){try{k=localStorage.getItem(`${BASE_KEY}.${PID}.kind`)}catch(_){}if(!KINDS[k]||KINDS[k].soon)k=P.defaultKind}
@@ -773,17 +789,18 @@ function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]
   $('pixLeft').hidden=!pix;$('formLeft').hidden=pix;$('startCard').hidden=!pix;$('aiCard').hidden=!pix||P.ai===false;$('png').hidden=!pix;
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
   const starts=pix&&canGrid[P.type]&&canGrid[P.type]()?lists[P.type]():[];
-  $('aiHeadOpts').hidden=P.type!=='head';if(P.type==='head')setupStyle();
+  $('aiHeadOpts').hidden=P.type!=='head';if(P.type==='head')setupStyle();$('aiStyle').hidden=$('aiStyle').previousElementSibling.hidden=!!P.lab;
+  $('labReset').hidden=$('labRow').hidden=!P.lab;$('aiBase').parentElement.hidden=!!P.lab;
   $('cmpCard').hidden=!P.compare;if(!P.compare)lastImg=null;
-  $('kitCard').hidden=true;// the parts kit makes old-style 32×32 heads, so it's retired here (the app still uses it for scouted players)$('headStart').hidden=!starts.length;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
+  $('kitCard').hidden=true;/* the parts kit makes old-style 32×32 heads, so it's retired here (the app still uses it for scouted players) */$('headStart').hidden=!starts.length||!!P.lab;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
   document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');document.documentElement.style.setProperty('--cardB',(P.cardBorder||1)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
   $('fName').placeholder={head:'e.g. Sky Hook',logo:'e.g. Thunder',kit:'e.g. Midnight Gold',pbg:'e.g. Toxic Flames'}[P.type]||'e.g. Club badge';
   $('size').innerHTML=(P.sizes||[32]).map(s=>`<option value="${s}">${(P.sizeNames&&P.sizeNames[s])||s+'×'+s}</option>`).join('');$('size').hidden=(P.sizes||[]).length<2;
   $('baseHead').innerHTML=starts.map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(P.type==='head'&&ART&&ART.parts&&ART.build)setupKit();
   LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>({...x,type:x.type||'head'}));if(P.mode==='form'&&FORM)renderForm();else if(!$('headStart').hidden)startOptions()}).catch(()=>{});
   hist=[];fut=[];curId=null;curName='';FORM=null;lastEdit='';unlockNote(null);folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';$('pvBig').style.cssText='';
-  const sizes=P.sizes||[32],back=wipRestore();
-  if(back==='none'&&pix)setGrid(empty(P.type==='head'?64:sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}
+  const sizes=P.sizes||[32],back=wipRestore();if(back==='none'&&P.lab)setGrid(labBase());
+  if(back==='none'&&pix&&!P.lab)setGrid(empty(P.type==='head'?64:sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}
   $('size').value=N;zReset();$('swapBox').hidden=P.type!=='head';if(P.type==='head')setupSwap();
   migrate();if(back==='drawing'&&pix)toast('Picked up where you left off');$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
 $('proj').innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
