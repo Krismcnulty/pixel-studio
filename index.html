@@ -543,7 +543,10 @@ function loadText(t,fromAi){let d;try{const a=t.indexOf('{'),b=t.lastIndexOf('}'
   const rows=d.px.map(r=>String(r)),want=Math.max(rows.length,...rows.map(r=>r.length));
   const n=P.type==='head'?32:(P.sizes.find(s=>s>=want)||P.sizes[P.sizes.length-1]);let fixed=0;
   const px=Array.from({length:n},(_,y)=>{let r=rows[y]||'';if(r.length!==n||!rows[y])fixed++;r=(r+'.'.repeat(n)).slice(0,n);return[...r].map(c=>c in pal?c:'.').join('')});
+  // Editing one of your library items? An AI result is a new version of it, so it keeps that item's id, name, rarity and where.
+  const ed=fromAi&&curId&&lastEdit?libGet(curId):null;
   const x={...d,pal,px};try{openD(x)}catch(_){return toast("That isn't Pixel Studio code")}
+  if(ed){editLib(ed);return toast(`Loaded as the new ${ed.name}: submit to replace it in the app`)}
   if(fromAi||!/^[a-z0-9]{2,20}$/.test(String(d.id||''))){curId=null;curName=''}
   toast(fixed?`Loaded: ${fixed} row${fixed>1?'s were':' was'} the wrong length, so check the edges`:'Loaded: now make it your own')}
 $('png').onclick=()=>{const k=Math.max(8,Math.round(512/N)),c=document.createElement('canvas');c.width=c.height=N*k;const x=c.getContext('2d');
