@@ -19,6 +19,7 @@ The first time you open the Habit League project, any designs saved in the old H
 
 - Pen, erase, fill, colour picker, mirror, undo/redo. Shortcuts: B, E, G, I, M, Ctrl+Z, Ctrl+Y. Right-click erases.
 - Auto outline: always on for Habit League heads, optional in the Sketchbook.
+- **Describe it (AI):** type what you want (e.g. "zombie") and press **Copy AI prompt**. It copies a prompt with the art rules and your current drawing. Paste it into Claude, copy the reply, then press **Paste result**. Pasting forgives the usual AI slips: text around the code, rows of the wrong length, and letters missing from the palette.
 - Start from an empty grid, an existing head, the parts kit, an image (cropped, shrunk, snapped to the palette), or pasted code.
 - **My designs** has folders and is saved in the browser. **Download folder** and **Open file** move designs between devices as `.json` files.
 - **Submit to app** and **Save draft to repo** open a ready-made GitHub issue on the project's repo. Its art intake action checks the design, commits it and replies with a preview.
