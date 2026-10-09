@@ -45,7 +45,9 @@ header a{color:var(--muted);font-size:13px}
 .prev{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .av{border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#232c4a,#0c1226);border:1px solid var(--line);display:grid;place-items:center}
 .av svg{width:100%;height:100%;display:block}
-.big{width:150px;height:150px}.sm{width:var(--card,52px);height:var(--card,52px);border-width:var(--cardB,1px)}
+.big{width:150px;height:150px}.prof{width:134px;height:134px;border-width:2px}
+.cmprow{display:flex;align-items:flex-end;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.cmprow:first-child{border-top:0;padding-top:0}
+.cmprow b{display:block;font-size:13px;margin-bottom:4px}.cmprow .tb{margin-top:6px}.sm{width:var(--card,52px);height:var(--card,52px);border-width:var(--cardB,1px)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin:8px 0 3px}
 input,select,textarea{width:100%;background:var(--well);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -121,6 +123,11 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <h2 id="pvTitle">Preview</h2>
         <div class="prev"><div class="av big" id="pvBig"></div><div><div class="row" id="pvRow"></div><p class="note" id="pvNote" style="margin:6px 0 0"></p></div></div>
         <label class="chk" id="outlineWrap"><input type="checkbox" id="outline" checked> Auto outline</label>
+      </div>
+      <div class="card" id="cmpCard" hidden>
+        <h2>Compare sizes</h2>
+        <div id="cmp"><p class="note" style="margin:0">Upload an image under <b>Start from</b> to see it at 32×32, 48×48 and 64×64 side by side.</p></div>
+        <p class="note" style="margin:8px 0 0">Each size is shown at a Habit League player card (68px) and the profile (134px), the same way heads appear in the app. Press <b>Edit</b> to draw on that version.</p>
       </div>
       <div class="card" id="aiCard">
         <h2>Describe it (AI)</h2>
@@ -202,7 +209,10 @@ const PROJECTS={
     engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',library:'/habit-league/art/library.json'},
   'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
     cvNote:'Free drawing at any size. Turn Auto outline on for a dark 1-pixel outline like the game art. Mirror copies each pixel to the other side. Right-click erases on a computer.',
-    pvTitle:'Preview',pvNote:'Small size'}
+    pvTitle:'Preview',pvNote:'Small size'},
+  'test':{name:'Testing area',note:'Try ideas at 32, 48 or 64 pixels. Nothing here goes to an app.',type:'sprite',sizes:[32,48,64],outline:'toggle',fields:false,compare:true,
+    cvNote:'A place to experiment. Upload an image under Start from to see it at 32×32, 48×48 and 64×64 side by side, then edit whichever size you like. Auto outline adds the dark outline the game uses.',
+    pvTitle:'Preview',pvNote:'Card size (68px) and profile size (134px), as in Habit League',cardPx:68,cardBorder:2}
 };
 /* Kinds: the cosmetic types a project has, shown as tabs. Each kind's settings override the project's.
    mode 'pixel' uses the pixel editor; mode 'form' starts from an existing item and changes its settings, previewed with the app's own code.
@@ -276,6 +286,7 @@ function draw(){const W=cv.width,s=W/N,R=v=>Math.round(v);cx.clearRect(0,0,W,W);
 // Card-size previews use the app's whole-pixel scale (svg(grid, scale)), so they match a player card exactly.
 const cardSvg=G=>ART&&P.type==='head'&&P.cardScale&&G.length===32?ART.svg(G,P.cardScale):svgOf(G);
 function preview(){if(P.mode==='form')return formPreview();$('pvBig').style.cssText='';$('pvBig').innerHTML=svgOf(grid);
+  if(P.compare){$('pvRow').innerHTML=`<div class="av sm">${svgOf(grid)}</div><div class="av prof">${svgOf(grid)}</div>`;return}
   const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)).map(id=>ART.headGrid(id))
     :P.type==='logo'&&has('logos','logoGrid')?ART.logos().slice(0,3).map(l=>ART.logoGrid(l.id)):[];
   $('pvRow').innerHTML=`<div class="av sm">${cardSvg(grid)}</div>`+others.map(g=>`<div class="av sm">${cardSvg(g)}</div>`).join('')}
@@ -417,7 +428,14 @@ $('startEmpty').onclick=()=>{load(empty(+$('size').value));curId=null};
 $('startHead').onclick=()=>{const id=$('baseHead').value,L=libGet(id);load(gridOf[P.type](id));if(L)return editLib(L);notEditing();toast('Loaded: edit away, then save it under a new name')};
 
 // ---- image import: crop to the subject, shrink to the grid, snap colours, tidy ----
-$('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{load(fromImage(img,+$('size').value));curId=null;toast('Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
+let lastImg=null;
+// Testing area: the same image converted at every size, shown side by side at card and profile size.
+function compare(){if(!P.compare||!lastImg)return;let G={};try{for(const n of P.sizes)G[n]=fromImage(lastImg,n)}catch(err){return toast(err.message)}
+  const show=g=>basicSvg(g,useOutline());
+  $('cmp').innerHTML=P.sizes.map(n=>`<div class="cmprow"><div><b>${n}×${n}</b><button class="tb" data-cmp="${n}">Edit</button></div><div class="av sm">${show(G[n])}</div><div class="av prof">${show(G[n])}</div></div>`).join('');
+  document.querySelectorAll('[data-cmp]').forEach(b=>b.onclick=()=>{const n=+b.dataset.cmp;$('size').value=n;load(G[n]);curId=null;toast(`Editing the ${n}×${n} version`)})}
+['imgPal','imgBg','outline'].forEach(id=>$(id).addEventListener('change',()=>compare()));
+$('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{lastImg=img;load(fromImage(img,+$('size').value));curId=null;compare();toast(P.compare?'Imported at every size: compare them on the right':'Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
 function fromImage(img,n){
   const W=Math.min(img.naturalWidth,800),H=Math.round(img.naturalHeight*W/img.naturalWidth),c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(img,0,0,W,H);
   const D=x.getImageData(0,0,W,H).data,px=(i,j)=>{const o=(j*W+i)*4;return[D[o],D[o+1],D[o+2],D[o+3]]};
@@ -683,6 +701,7 @@ function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]
   $('pixLeft').hidden=!pix;$('formLeft').hidden=pix;$('startCard').hidden=!pix;$('aiCard').hidden=!pix||P.ai===false;$('png').hidden=!pix;
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
   const starts=pix&&canGrid[P.type]&&canGrid[P.type]()?lists[P.type]():[];
+  $('cmpCard').hidden=!P.compare;if(!P.compare)lastImg=null;
   $('kitCard').hidden=!(pix&&P.type==='head'&&ART&&ART.parts&&ART.build);$('headStart').hidden=!starts.length;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
   document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');document.documentElement.style.setProperty('--cardB',(P.cardBorder||1)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
   $('fName').placeholder={head:'e.g. Sky Hook',logo:'e.g. Thunder',kit:'e.g. Midnight Gold',pbg:'e.g. Toxic Flames'}[P.type]||'e.g. Club badge';

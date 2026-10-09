@@ -8,6 +8,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
 - `PROJECTS` at the top of the script lists the apps the studio makes art for:
   - `habit-league` makes Habit League cosmetics (tabs: Team logo, kits, player backgrounds, heads; Arena and Effects to come) with the app's own code.
   - `sketchbook` is free drawing at 16 to 64 pixels, for football badges, kits and ideas.
+  - `test` (Testing area) is for experiments at 32/48/64. With `compare:true`, an uploaded image is converted at every size (`compare()`, using `fromImage`) and shown side by side at card (68px) and profile (134px) size; **Edit** loads one into the canvas. Nothing submits anywhere.
 - **Tabs (kinds).** A project with `kinds` shows tabs from `TABS` (Habit League: Team / Arena / Effects, matching the app's Locker). Each tab's settings in `KINDS` are merged over the project's into `P`, and `openKind()` sets up its editor. `openProject()` only loads the engine.
   - `mode:'pixel'` tabs use the pixel editor: heads (32×32) and team logos (16×16).
   - `mode:'form'` tabs start from an existing item and change its settings: kits (colours, pattern, number font) and player backgrounds (swap the hex colours in an existing `--pbg`). `FORM` holds the current settings.
