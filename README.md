@@ -32,6 +32,7 @@ Previews are drawn by the app itself. Animated backgrounds (Holo, Snowfall) show
 
 - Pen, erase, fill, colour picker, replace, mirror, undo/redo. Shortcuts: B, E, G, I, R, M, Ctrl+Z, Ctrl+Y. Right-click erases.
 - **Replace** (R): tap a colour on the drawing to change it everywhere to the selected colour.
+- **Clean up** (Colours card): makes a blurry drawing crisper without moving anything. It merges near-identical colours into flat areas (keeping distinct details like eye whites and highlights), removes stray speckles and strengthens light and shadow. Undo goes back.
 - **Zoom:** pinch and drag with two fingers on a phone; mouse wheel, the − / + buttons, Space+drag or middle-drag to pan on a computer. **Fit** (or 0) shows the whole drawing.
 - **Swap skin / Swap hair** (heads): changes every skin or hair tone at once, to another set or tinted with the selected colour, keeping the shading.
 - **Autosave:** the design in progress and its details are kept in the browser for each project and tab, so a closed tab or a refresh loses nothing.

@@ -112,6 +112,10 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <h2>Colours</h2>
         <div id="pals"></div>
         <div class="cur"><span class="sw on" id="curSw"></span><span id="curHex"></span><input type="color" id="custom" style="width:46px;height:36px;padding:2px"><span>Custom</span></div>
+        <div id="cleanBox" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+          <div class="row"><label style="margin:0;min-width:74px">Clean up</label><select id="clCols" style="flex:1;width:auto"><option value="0">Keep the colours</option><option value="24">Merge to 24 colours</option><option value="16" selected>Merge to 16 colours</option><option value="12">Merge to 12 colours</option><option value="8">Merge to 8 colours</option></select><button class="btn primary" id="clGo">✨ Clean up</button></div>
+          <div class="xs" style="margin-top:6px"><label><input type="checkbox" id="clSpeck" checked>Remove stray pixels</label><label><input type="checkbox" id="clContrast" checked>Boost contrast</label></div>
+          <p class="note" style="margin:6px 0 0">Makes a blurry drawing crisper without moving anything: merges near-identical colours into flat areas, removes speckles and strengthens light and shadow. Press it again for a stronger effect, or Undo to go back.</p></div>
         <div id="swapBox"><div class="row" style="margin-top:12px"><label style="margin:0;min-width:74px">Swap skin</label><select id="swSkin" style="flex:1;width:auto"></select><button class="btn" id="swSkinGo">Swap</button></div>
           <div class="row" style="margin-top:6px"><label style="margin:0;min-width:74px">Swap hair</label><select id="swHair" style="flex:1;width:auto"></select><button class="btn" id="swHairGo">Swap</button></div>
           <p class="note" style="margin:6px 0 0">Changes every skin or hair tone at once and keeps the shading. <b>Tint</b> uses the selected colour, e.g. pick a green and tint the skin for a zombie. <b>🔁 Replace</b> (top) changes any single colour everywhere.</p></div>
@@ -374,6 +378,22 @@ function palettes(){const groups=palGroups(),used=[...new Set(grid.flat().filter
   $('pals').innerHTML=groups.map(([l,cs])=>`<div class="pal-l">${l}</div><div class="pal">${cs.map(c=>`<button class="sw" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('')}</div>`).join('');
   document.querySelectorAll('.pal .sw').forEach(b=>b.onclick=()=>setColor(b.dataset.c));setColor(color)}
 
+// ---- clean up: crisper without moving anything (merge colours, remove speckles, boost contrast) ----
+function cleanUp(){const px=[];for(const r of grid)for(const c of r)if(c)px.push(rgb(c));if(!px.length)return toast('Draw or import something first');
+  push();const k=+$('clCols').value,before=new Set(grid.flat().filter(Boolean)).size;
+  // 1. merge colours: k-means over every pixel, so big areas pull the palette towards them
+  if(k&&before>k){const C=kmeans(px,k).map(toHex),map={};for(const c of new Set(grid.flat().filter(Boolean))){let b=0,bd=1e9;C.forEach((h,j)=>{const d=cdist(rgb(c),rgb(h));if(d<bd){bd=d;b=j}});map[c]=C[b]}
+    for(const r of grid)for(let i=0;i<r.length;i++)if(r[i])r[i]=map[r[i]]}
+  // 2. remove speckles: a pixel with no same-coloured neighbour takes its neighbours' colour, unless it stands out (an eye highlight, say)
+  if($('clSpeck').checked)for(let pass=0;pass<2;pass++){const g=clone(grid);for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=g[y][x];if(!c)continue;
+    if(N4.some(([dx,dy])=>g[y+dy]&&g[y+dy][x+dx]===c))continue;const cnt={};for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const v=(dx||dy)&&g[y+dy]&&g[y+dy][x+dx];if(v)cnt[v]=(cnt[v]||0)+1}
+    const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];if(best&&best[1]>=3&&cdist(rgb(c),rgb(best[0]))<90)grid[y][x]=best[0]}}
+  // 3. boost contrast: spread the lightness of every colour a little further from the middle, and add a touch of saturation
+  if($('clContrast').checked){const map={};for(const c of new Set(grid.flat().filter(Boolean))){const [h,sat,l]=hsl(c);map[c]=fromHsl([h,Math.min(1,sat*1.06),Math.max(0,Math.min(1,l<.5?.5-(.5-l)*1.06:.5+(l-.5)*1.12))])}
+    for(const r of grid)for(let i=0;i<r.length;i++)if(r[i])r[i]=map[r[i]]}
+  draw();palettes();toast(`Cleaned up: ${before} → ${new Set(grid.flat().filter(Boolean)).size} colours`)}
+$('clGo').onclick=cleanUp;
+
 // ---- skin and hair swap: find which skin or hair set a head uses, then swap every tone for the matching tone of another set ----
 // A "family" is a list of aligned ramps: tone k of one ramp matches tone k of every other ramp in the family.
 // Families come from the guide's palette tables and, when the engine is loaded, from heads the app itself draws.
@@ -443,9 +463,15 @@ function compare(){if(!P.compare||!lastImg)return;let G={};try{for(const n of P.
 ['imgPal','imgBg','outline'].forEach(id=>$(id).addEventListener('change',()=>compare()));
 $('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{lastImg=img;load(fromImage(img,+$('size').value));curId=null;compare();toast(P.compare?'Imported at every size: compare them on the right':'Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
 // Fewer, flatter colours make features crisper: k-means picks the k colours that best fit the image.
-function kmeans(cols,k){if(!cols.length)return[];const lum=c=>.3*c[0]+.59*c[1]+.11*c[2],srt=[...cols].sort((a,b)=>lum(a)-lum(b));k=Math.min(k,cols.length);
-  let C=Array.from({length:k},(_,i)=>srt[Math.floor((i+.5)*srt.length/k)].slice());
-  for(let it=0;it<14;it++){const S=C.map(()=>[0,0,0,0]);for(const c of cols){let b=0,bd=1e9;for(let j=0;j<k;j++){const d=cdist(c,C[j]);if(d<bd){bd=d;b=j}}S[b][0]+=c[0];S[b][1]+=c[1];S[b][2]+=c[2];S[b][3]++}
+function kmeans(cols,k){if(!cols.length)return[];
+  // unique colours with how many pixels use each
+  const U=new Map();for(const c of cols){const key=c.map(v=>Math.round(v)).join();const u=U.get(key);if(u)u.n++;else U.set(key,{c:c.map(Math.round),n:1})}
+  const L=[...U.values()];k=Math.min(k,L.length);
+  // start from the most used colour, then keep adding the colour that is furthest from those chosen, weighted a little by how
+  // much it's used: distinct details such as eye whites and hair highlights get a colour of their own instead of being merged away
+  let C=[L.reduce((a,b)=>b.n>a.n?b:a).c.slice()];
+  while(C.length<k){let best=null,bs=-1;for(const u of L){const d=Math.min(...C.map(c=>cdist(u.c,c)));const sc=d*Math.sqrt(u.n);if(sc>bs){bs=sc;best=u}}C.push(best.c.slice())}
+  for(let it=0;it<10;it++){const S=C.map(()=>[0,0,0,0]);for(const u of L){let b=0,bd=1e9;for(let j=0;j<C.length;j++){const d=cdist(u.c,C[j]);if(d<bd){bd=d;b=j}}S[b][0]+=u.c[0]*u.n;S[b][1]+=u.c[1]*u.n;S[b][2]+=u.c[2]*u.n;S[b][3]+=u.n}
     C=S.map((s,j)=>s[3]?[s[0]/s[3],s[1]/s[3],s[2]/s[3]]:C[j])}
   return C}
 function fromImage(img,n){
@@ -576,7 +602,7 @@ function aiPrompt(desc){const n=N,head=P.type==='head',logo=P.type==='logo',old=
     :logo?`{"type":"logo","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[16 strings of 16 characters]}`
     :`{"type":"sprite","id":"lowercaseletters","name":"Short Name","outline":${useOutline()},"pal":{"a":"#rrggbb"},"px":[${n} strings of ${n} characters]}`;
   return [head?`Draw a pixel-art player head for my game Habit League: ${desc}.`:logo?`Draw a 16×16 pixel-art team logo for my game Habit League: ${desc}.`:`Draw ${n}×${n} pixel art for me: ${desc}.`,
-    base?`\nStart from this existing drawing and change it, keeping what already works (proportions, lighting, feature positions):\n${cur}`:'',
+    base?`\nStart from this existing drawing. It is the design to keep: keep its pose, face shape, hair outline and every feature in the same place, and change only what the description asks for. Change as few pixels as you can; don't redraw it from scratch.\n${cur}`:'',
     head?`\n${old?HEAD_RULES_32:HEAD_RULES}`:logo?`\n${LOGO_RULES}`:`\nRules:\n- Exactly ${n} rows of exactly ${n} characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.\n- Flat colours, no anti-aliasing or gradients, few colours, bold shapes that read at small size. Light from the top left.${useOutline()?'\n- Don\'t draw an outline: a 1-pixel dark outline is added automatically.':''}`,
     `\nReply with only the finished design as one line of JSON in a code block, in exactly this shape:\n${shape}\nThe name is at most 20 characters. The id is 2 to 20 lowercase letters or numbers.`].join('\n')}
 $('aiCopy').onclick=async()=>{const desc=$('aiDesc').value.trim();if(!desc){toast('Describe what you want first');$('aiDesc').focus();return}
