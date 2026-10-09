@@ -134,7 +134,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <textarea id="aiDesc" style="min-height:64px;font:inherit" placeholder="e.g. a zombie with grey-green skin, stitches and a torn ear"></textarea>
         <label class="chk"><input type="checkbox" id="aiBase" checked> Start from my current drawing</label>
         <div class="row" style="margin-top:10px"><button class="btn primary" id="aiCopy">✨ Copy AI prompt</button><a class="btn" id="aiOpen" href="https://claude.ai/new" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text);display:inline-block">Open Claude ↗</a><button class="btn" id="aiPaste">📥 Paste result</button></div>
-        <p class="note" style="margin:6px 0 0"><b>1.</b> Describe it and press <b>Copy AI prompt</b>. <b>2.</b> Paste the prompt into Claude and send it. <b>3.</b> Copy Claude's reply, come back and press <b>Paste result</b>. Starting from a drawing (a built head works well) gives much better results than starting from nothing.</p>
+        <p class="note" style="margin:6px 0 0"><b>1.</b> Describe it and press <b>Copy AI prompt</b>. <b>2.</b> Paste the prompt into Claude and send it. <b>3.</b> Copy Claude's reply, come back and press <b>Paste result</b>. Starting from a drawing (an imported image, an existing head or a logo) gives much better results than starting from nothing.</p>
       </div>
       <div class="card" id="kitCard">
         <h2>Parts kit</h2>
@@ -153,13 +153,13 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
       </div>
       <div class="card" id="startCard">
         <h2>Start from</h2>
-        <div class="row"><select id="size" style="width:auto"></select><button class="btn" id="startEmpty">Empty grid</button></div>
+        <div class="row"><select id="size" style="width:auto"></select><button class="btn" id="startEmpty">Empty grid</button><button class="btn" id="dbl" hidden>⤢ Double to 64×64</button></div>
         <div id="headStart"><label id="startLabel">An existing head</label>
         <div class="row"><select id="baseHead" style="flex:1"></select><button class="btn" id="startHead">Load</button></div></div>
         <label>An image (AI art, a drawing or a photo)</label>
         <input type="file" id="imgFile" accept="image/*">
         <div class="two">
-          <div><label>Colours</label><select id="imgPal"><option value="snap">Snap to the palette</option><option value="keep">Keep its own colours</option></select></div>
+          <div><label>Colours</label><select id="imgPal"><option value="snap">Snap to the palette</option><option value="keep">Keep its own colours</option><option value="k24">Reduce to 24 colours</option><option value="k16">Reduce to 16 colours</option><option value="k12">Reduce to 12 colours</option><option value="k8">Reduce to 8 colours</option></select></div>
           <div><label>Background</label><select id="imgBg"><option value="auto">Remove (auto)</option><option value="keep">Keep</option></select></div>
         </div>
         <p class="note" style="margin:6px 0 0">The image is cropped to the subject, shrunk to the grid and cleaned up. It's a starting point to tidy by hand.</p>
@@ -221,8 +221,8 @@ const TABS={HL:[['Team',[['logo','Team Logo'],['kit','Player Kits'],['pbg','Play
   ['Arena',[['atm','Atmosphere'],['board','Scoreboard'],['court','Court'],['bench','Bench']]],
   ['Effects',[['ball','Ball'],['shot','Shot Style'],['cel','Win Celebration'],['snd','Sound Pack']]]]};
 const KINDS={
-  head:{type:'head',mode:'pixel',sizes:[32],outline:'always',note:'Player heads',legacyKey:'hlStudio.v1',ai:true,
-    cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
+  head:{type:'head',mode:'pixel',sizes:[64,32],sizeNames:{64:'64×64',32:'32×32 (old style)'},outline:'always',note:'Player heads',legacyKey:'hlStudio.v1',ai:true,
+    cvNote:'New heads are 64×64, turned slightly to the left. Leave the background empty: the dark outline is added automatically, exactly as the app does. Old 32×32 heads still open here: press Double to 64×64 to redraw one in the new style. Right-click erases on a computer.',
     pvTitle:'Preview (as the app draws it)',cardPx:68,cardBorder:2,cardScale:2,pvNote:'Exactly as on a player card in the app, next to existing heads'},
   logo:{type:'logo',mode:'pixel',sizes:[16],outline:'never',note:'Team logos',ai:true,
     cvNote:'Draw the 16×16 team logo. The app smooths the edges and adds light and shade when it shows a logo, so judge it by the preview. Mirror copies each pixel to the other side. Right-click erases on a computer.',
@@ -271,7 +271,9 @@ function basicSvg(G,outline=useOutline()){const n=G.length,out=G.map(r=>r.slice(
   for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(out[y][x])r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${out[y][x]}"/>`;
   return`<svg viewBox="${ox} ${oy} ${side} ${side}" shape-rendering="crispEdges">${r}</svg>`}
 // A saved sprite carries its own outline setting; the drawing on the canvas follows the Auto outline box.
-const svgOf=G=>(ART&&P.type==='head'&&G.length===32)?ART.svg(G):(P.type==='logo'&&has('logoSvg')&&G.length===16)?ART.logoSvg(G)
+// The app draws 64×64 heads once it lists 64 in HL_ART.headSizes; until then a 64×64 head is previewed with the built-in renderer.
+const headOk=n=>n===32||(n===64&&has('headSizes')&&ART.headSizes.includes(64));
+const svgOf=G=>(ART&&P.type==='head'&&headOk(G.length))?ART.svg(G):(P.type==='head'&&G.length===64)?basicSvg(G,true):(P.type==='logo'&&has('logoSvg')&&G.length===16)?ART.logoSvg(G)
   :basicSvg(G,P.outline!=='never'&&(P.outline==='always'||(typeof G.outline==='boolean'?G.outline:useOutline())));
 
 // ---- drawing ----
@@ -282,9 +284,10 @@ function draw(){const W=cv.width,s=W/N,R=v=>Math.round(v);cx.clearRect(0,0,W,W);
   for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){cx.fillStyle=grid[y][x];cx.fillRect(R(x*s),R(y*s),R((x+1)*s)-R(x*s),R((y+1)*s)-R(y*s))}
   if(showGrid&&N<=64){cx.strokeStyle='rgba(255,255,255,.07)';cx.lineWidth=1;for(let i=1;i<N;i++){const p=R(i*s)+.5;cx.beginPath();cx.moveTo(p,0);cx.lineTo(p,W);cx.stroke();cx.beginPath();cx.moveTo(0,p);cx.lineTo(W,p);cx.stroke()}
     cx.strokeStyle='rgba(255,122,26,.25)';cx.beginPath();cx.moveTo(W/2,0);cx.lineTo(W/2,W);cx.stroke()}
-  preview();wipLater()}
+  preview();wipLater();$('dbl').hidden=!(P.type==='head'&&N===32)}
 // Card-size previews use the app's whole-pixel scale (svg(grid, scale)), so they match a player card exactly.
-const cardSvg=G=>ART&&P.type==='head'&&P.cardScale&&G.length===32?ART.svg(G,P.cardScale):svgOf(G);
+// cardScale is screen pixels per art pixel for a 32×32 head; a 64×64 head uses half that, so both fill the card the same.
+const cardSvg=G=>ART&&P.type==='head'&&P.cardScale&&headOk(G.length)?ART.svg(G,P.cardScale*32/G.length):svgOf(G);
 function preview(){if(P.mode==='form')return formPreview();$('pvBig').style.cssText='';$('pvBig').innerHTML=svgOf(grid);
   if(P.compare){$('pvRow').innerHTML=`<div class="av sm">${svgOf(grid)}</div><div class="av prof">${svgOf(grid)}</div>`;return}
   const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)).map(id=>ART.headGrid(id))
@@ -424,6 +427,9 @@ $('kStamp').onclick=()=>{if(N!==32)return toast('Stamping needs a 32×32 grid');
 
 // ---- start points ----
 function load(g){push();setGrid(clone(g));$('size').value=N;zReset();draw();palettes()}
+// An old 32×32 head doubled to 64×64 (each pixel becomes 2×2), ready to redraw in the new style. If you're editing a library head, it stays that head.
+$('dbl').onclick=()=>{if(N!==32)return;const g=empty(64);for(let y=0;y<32;y++)for(let x=0;x<32;x++)g[2*y][2*x]=g[2*y][2*x+1]=g[2*y+1][2*x]=g[2*y+1][2*x+1]=grid[y][x];
+  load(g);toast(curId?'Doubled: redraw it in the new style, then submit to replace it':'Doubled to 64×64: now add the detail')};
 $('startEmpty').onclick=()=>{load(empty(+$('size').value));curId=null};
 $('startHead').onclick=()=>{const id=$('baseHead').value,L=libGet(id);load(gridOf[P.type](id));if(L)return editLib(L);notEditing();toast('Loaded: edit away, then save it under a new name')};
 
@@ -436,6 +442,12 @@ function compare(){if(!P.compare||!lastImg)return;let G={};try{for(const n of P.
   document.querySelectorAll('[data-cmp]').forEach(b=>b.onclick=()=>{const n=+b.dataset.cmp;$('size').value=n;load(G[n]);curId=null;toast(`Editing the ${n}×${n} version`)})}
 ['imgPal','imgBg','outline'].forEach(id=>$(id).addEventListener('change',()=>compare()));
 $('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{lastImg=img;load(fromImage(img,+$('size').value));curId=null;compare();toast(P.compare?'Imported at every size: compare them on the right':'Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
+// Fewer, flatter colours make features crisper: k-means picks the k colours that best fit the image.
+function kmeans(cols,k){if(!cols.length)return[];const lum=c=>.3*c[0]+.59*c[1]+.11*c[2],srt=[...cols].sort((a,b)=>lum(a)-lum(b));k=Math.min(k,cols.length);
+  let C=Array.from({length:k},(_,i)=>srt[Math.floor((i+.5)*srt.length/k)].slice());
+  for(let it=0;it<14;it++){const S=C.map(()=>[0,0,0,0]);for(const c of cols){let b=0,bd=1e9;for(let j=0;j<k;j++){const d=cdist(c,C[j]);if(d<bd){bd=d;b=j}}S[b][0]+=c[0];S[b][1]+=c[1];S[b][2]+=c[2];S[b][3]++}
+    C=S.map((s,j)=>s[3]?[s[0]/s[3],s[1]/s[3],s[2]/s[3]]:C[j])}
+  return C}
 function fromImage(img,n){
   const W=Math.min(img.naturalWidth,800),H=Math.round(img.naturalHeight*W/img.naturalWidth),c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(img,0,0,W,H);
   const D=x.getImageData(0,0,W,H).data,px=(i,j)=>{const o=(j*W+i)*4;return[D[o],D[o+1],D[o+2],D[o+3]]};
@@ -448,6 +460,8 @@ function fromImage(img,n){
     for(let j=Math.floor(sy+gy*cs);j<sy+(gy+1)*cs;j++)for(let i=Math.floor(sx+gx*cs);i<sx+(gx+1)*cs;i++){if(i<0||j<0||i>=W||j>=H)continue;tot++;const p=px(i,j);if(isBg(p))continue;r+=p[0];g+=p[1];b+=p[2];k++}
     if(k&&k/Math.max(1,tot)>.45)G[gy+1][gx+1]=[r/k,g/k,b/k]}
   if($('imgPal').value==='snap'){const PAL=palGroups().flatMap(g=>g[1]).map(h=>[h,rgb(h)]);for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]){let best=null,bd=1e9;for(const [h,c] of PAL){const d=cdist(G[y][i],c);if(d<bd){bd=d;best=h}}G[y][i]=best}}
+  else if(/^k\d+$/.test($('imgPal').value)){const cells=[];for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i])cells.push(G[y][i]);
+    const C=kmeans(cells,+$('imgPal').value.slice(1));for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]){let b=0,bd=1e9;C.forEach((c,j)=>{const d=cdist(G[y][i],c);if(d<bd){bd=d;b=j}});G[y][i]=toHex(C[b])}}
   else{const keep=[];for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]){let mm=keep.find(k=>cdist(k,G[y][i])<26);if(!mm){mm=G[y][i];keep.push(mm)}G[y][i]=toHex(mm)}}
   for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]&&N4.filter(([a,b])=>G[y+b]&&G[y+b][i+a]).length<=1)G[y][i]=null;
   return G}
@@ -501,7 +515,7 @@ function list(){const all=store(),F=foldersOf();
 function openD(d){if(d&&d.type&&P.kinds&&d.type!==P.type)return toast(`That's a ${TYPE_NAMES[d.type]||d.type}: open its tab first`);
   if(P.mode==='form'){FORM=decodeForm(d);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop';
     renderForm();preview();wipLater();$('code').value=JSON.stringify(strip(d));unlockNote(libGet(d.id)?d.id:null);return}
-  const g=decode(d);if(P.sizes.length===1&&g.length!==P.sizes[0])return toast(`${P.note||'Designs'} here must be ${P.sizes[0]}×${P.sizes[0]}`);
+  const g=decode(d);if(!P.sizes.includes(g.length))return toast(`${P.note||'Designs'} here must be ${P.sizes.map(n=>n+'×'+n).join(' or ')}`);
   load(g);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';unlockNote(libGet(d.id)?d.id:null);
   if(P.fields){$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop'}
   if(P.outline==='toggle'){$('outline').checked=d.outline!==false;draw()}
@@ -525,7 +539,21 @@ $('export').onclick=async()=>{if(P.mode!=='form'&&!grid.flat().some(Boolean))ret
 $('import').onclick=()=>loadText($('code').value);
 
 // ---- Describe it (AI): build a prompt for Claude, then load its reply ----
-const HEAD_RULES=`Rules (Habit League art guide):
+const HEAD_RULES=`Rules (Habit League art guide, 64×64 heads):
+- Exactly 64 rows of exactly 64 characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.
+- A head and a short neck only: no shoulders. Turned slightly to the left, a gentle three-quarter view: the features sit a little left of centre, more of the cheek and the ear show on the right of the picture, and the far ear (on the left) is mostly hidden. Every head turns the same way.
+- Don't draw an outline and leave the background "." (the app adds a 1-pixel dark outline itself).
+- Light from the top left: highlights on the forehead, the left cheekbone and the top of the hair; shadows on the right side, under the brows, under the nose and under the jaw.
+- Clearly defined features: a dark line for each upper eyelid, a small eye white, a dark iris with one white highlight pixel, solid brows, one shadow shape beside and under the nose, a dark mouth line with a lip tone below, and a dark jaw edge on the shadow side.
+- Flat colours only: 5 or 6 skin tones, 3 or 4 hair tones, no gradients, dithering noise or anti-aliasing. About 16 to 24 colours in total.
+- Proportions (x across, y down, 0 to 63): the head is roughly x 10 to 54; hair or hat from y 0 to 4 (big hair such as an afro can fill to the edges); eye line about y 30 to 34; nose tip about y 40; mouth about y 46 to 48; chin about y 56; neck y 56 to 63, narrower and darker than the face.
+- Skin tone sets (highlight > deep): #e5bd99 #dba87c #d39a6a #a56b44 #74492e | #a36f47 #8b5936 #7a4b2a #65381f #482514. A sixth, darker tone for the deepest shadow is fine. For unusual skins (zombie, alien, robot) make your own tones the same way: cool, pale highlights and warm, darker shadows.
+- Hair sets (highlight, base, dark): #4d4641 #1b120c #120c08 | #8c6850 #6b3e1f #462814 | #edd08b #e8c36a #977f45 | #a7a7a7 #8e8e8e #5c5c5c. Show hair texture (curls, strands) with the highlight and dark tones.
+- Accents (light, base, dark): yellow #fde68a #fbbf24 #d97706, red #fca5a5 #ef4444 #991b1b, green #86efac #22c55e #15803d, blue #7dd3fc #3b82f6 #1e3a8a, purple #c4b5fd #a855f7 #6b21a8.
+- Original character only: never a likeness of a real person, and the name mustn't be a real player's nickname.
+- It's shown 64 pixels wide on player cards (one screen pixel per art pixel) and 128 wide on the profile, so the face must still read clearly small: strong contrast around the eyes, nose and mouth.`;
+// Old-style 32×32 heads (straight on), for editing heads made before the switch to 64×64.
+const HEAD_RULES_32=`Rules (Habit League art guide, old-style 32×32 heads):
 - Exactly 32 rows of exactly 32 characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.
 - Facing straight on, no three-quarter turn. Head and a short neck only: no shoulders.
 - Don't draw an outline and leave the background "." (the app adds a 1-pixel dark outline itself).
@@ -542,14 +570,14 @@ const LOGO_RULES=`Rules (Habit League team logos):
 - A bold, simple emblem that fills most of the 16×16 square and reads clearly at small sizes, like a sports team badge or mascot icon.
 - Flat colours, no gradients or anti-aliasing, about 3 to 6 colours with strong contrast. Don't draw an outline or shading: the app smooths the edges and adds light and shade itself.
 - An original design: never a real team's or brand's logo.`;
-function aiPrompt(desc){const n=N,head=P.type==='head',logo=P.type==='logo',base=$('aiBase').checked&&grid.flat().some(Boolean);
+function aiPrompt(desc){const n=N,head=P.type==='head',logo=P.type==='logo',old=head&&n===32,base=$('aiBase').checked&&grid.flat().some(Boolean);
   let cur='';if(base){try{const d=encode();cur=JSON.stringify({pal:d.pal,px:d.px})}catch(_){}}
-  const shape=head?`{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[32 strings of 32 characters]}`
+  const shape=head?`{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[${n} strings of ${n} characters]}`
     :logo?`{"type":"logo","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[16 strings of 16 characters]}`
     :`{"type":"sprite","id":"lowercaseletters","name":"Short Name","outline":${useOutline()},"pal":{"a":"#rrggbb"},"px":[${n} strings of ${n} characters]}`;
   return [head?`Draw a pixel-art player head for my game Habit League: ${desc}.`:logo?`Draw a 16×16 pixel-art team logo for my game Habit League: ${desc}.`:`Draw ${n}×${n} pixel art for me: ${desc}.`,
     base?`\nStart from this existing drawing and change it, keeping what already works (proportions, lighting, feature positions):\n${cur}`:'',
-    head?`\n${HEAD_RULES}`:logo?`\n${LOGO_RULES}`:`\nRules:\n- Exactly ${n} rows of exactly ${n} characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.\n- Flat colours, no anti-aliasing or gradients, few colours, bold shapes that read at small size. Light from the top left.${useOutline()?'\n- Don\'t draw an outline: a 1-pixel dark outline is added automatically.':''}`,
+    head?`\n${old?HEAD_RULES_32:HEAD_RULES}`:logo?`\n${LOGO_RULES}`:`\nRules:\n- Exactly ${n} rows of exactly ${n} characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.\n- Flat colours, no anti-aliasing or gradients, few colours, bold shapes that read at small size. Light from the top left.${useOutline()?'\n- Don\'t draw an outline: a 1-pixel dark outline is added automatically.':''}`,
     `\nReply with only the finished design as one line of JSON in a code block, in exactly this shape:\n${shape}\nThe name is at most 20 characters. The id is 2 to 20 lowercase letters or numbers.`].join('\n')}
 $('aiCopy').onclick=async()=>{const desc=$('aiDesc').value.trim();if(!desc){toast('Describe what you want first');$('aiDesc').focus();return}
   const t=aiPrompt(desc);try{await navigator.clipboard.writeText(t);toast('Prompt copied: paste it into Claude')}catch(_){$('code').value=t;$('code').focus();$('code').select();toast('Prompt is in the Code box: copy it from there')}};
@@ -564,7 +592,7 @@ function loadText(t,fromAi){let d;try{const a=t.indexOf('{'),b=t.lastIndexOf('}'
   if(!d||!Array.isArray(d.px)||!d.px.length||typeof d.pal!=='object'||!d.pal)return toast("That isn't Pixel Studio code");
   const pal={};for(const [k,v] of Object.entries(d.pal))if(k.length===1&&k!=='.'&&/^#[0-9a-fA-F]{6}$/.test(v))pal[k]=v.toLowerCase();
   const rows=d.px.map(r=>String(r)),want=Math.max(rows.length,...rows.map(r=>r.length));
-  const n=P.type==='head'?32:(P.sizes.find(s=>s>=want)||P.sizes[P.sizes.length-1]);let fixed=0;
+  const asc=[...P.sizes].sort((a,b)=>a-b),n=asc.find(s=>s>=want)||asc[asc.length-1];let fixed=0;
   const px=Array.from({length:n},(_,y)=>{let r=rows[y]||'';if(r.length!==n||!rows[y])fixed++;r=(r+'.'.repeat(n)).slice(0,n);return[...r].map(c=>c in pal?c:'.').join('')});
   // Editing one of your library items? An AI result is a new version of it, so it keeps that item's id, name, rarity and where.
   const ed=fromAi&&curId&&lastEdit?libGet(curId):null;
@@ -702,15 +730,15 @@ function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
   const starts=pix&&canGrid[P.type]&&canGrid[P.type]()?lists[P.type]():[];
   $('cmpCard').hidden=!P.compare;if(!P.compare)lastImg=null;
-  $('kitCard').hidden=!(pix&&P.type==='head'&&ART&&ART.parts&&ART.build);$('headStart').hidden=!starts.length;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
+  $('kitCard').hidden=true;// the parts kit makes old-style 32×32 heads, so it's retired here (the app still uses it for scouted players)$('headStart').hidden=!starts.length;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
   document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');document.documentElement.style.setProperty('--cardB',(P.cardBorder||1)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
   $('fName').placeholder={head:'e.g. Sky Hook',logo:'e.g. Thunder',kit:'e.g. Midnight Gold',pbg:'e.g. Toxic Flames'}[P.type]||'e.g. Club badge';
-  $('size').innerHTML=(P.sizes||[32]).map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=(P.sizes||[]).length<2;
+  $('size').innerHTML=(P.sizes||[32]).map(s=>`<option value="${s}">${(P.sizeNames&&P.sizeNames[s])||s+'×'+s}</option>`).join('');$('size').hidden=(P.sizes||[]).length<2;
   $('baseHead').innerHTML=starts.map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(P.type==='head'&&ART&&ART.parts&&ART.build)setupKit();
   LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>({...x,type:x.type||'head'}));if(P.mode==='form'&&FORM)renderForm();else if(!$('headStart').hidden)startOptions()}).catch(()=>{});
   hist=[];fut=[];curId=null;curName='';FORM=null;lastEdit='';unlockNote(null);folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';$('pvBig').style.cssText='';
   const sizes=P.sizes||[32],back=wipRestore();
-  if(back==='none'&&pix)setGrid(P.type==='head'&&ART&&ART.base?ART.base(2,'std'):empty(sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}
+  if(back==='none'&&pix)setGrid(empty(P.type==='head'?64:sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}
   $('size').value=N;zReset();$('swapBox').hidden=P.type!=='head';if(P.type==='head')setupSwap();
   migrate();if(back==='drawing'&&pix)toast('Picked up where you left off');$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
 $('proj').innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
