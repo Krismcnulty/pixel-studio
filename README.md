@@ -46,12 +46,23 @@ Each tab keeps its own designs and folders, and submits to the app in the same w
 
 - `px` is a square grid, one character per pixel, with `.` for empty.
 - Sketchbook designs use `"type":"sprite"` and an `"outline"` true/false flag. They have no `rarity` or `where`.
+- Habit League team logos use `"type":"logo"`, the same encoding at 16×16.
+- Kits and player backgrounds are settings, not pixels:
+
+```json
+{"type":"kit","id":"teal","name":"Teal","rarity":"epic","where":"shop","b":"#0f766e","t":"#fde047","num":"#ffffff","pat":"hoops","font":"'Bebas Neue',sans-serif"}
+{"type":"pbg","id":"redmist","name":"Red Mist","rarity":"rare","where":"shop","base":"mist","colors":{"#a7f3d0":"#ff0000"}}
+```
+
+- A kit's `pat` must be one of `HL_ART.kitPatterns` and `font` one of `HL_ART.kitFonts`; `ns` (number outline colour), `sw` (outline width) and `fw` (font weight) are optional.
+- A player background copies a built-in one (`base`) and swaps the colours listed in `colors`.
 
 ## Adding a project (e.g. the football app)
 
 1. In the app, expose its drawing code on `window.HL_ART` (see Habit League's `index.html`). It needs:
    - `svg(grid)`, `heads()`, `headGrid(id)`, `base(skin, shape)`, `skins`, `hairs` and `shapes`
    - optionally `build(parts)` and `parts`, which turn on the parts kit
+   - optionally `logos()`, `logoGrid(id)`, `logoSvg(grid)`, `kits()`, `kitPatterns`, `kitFonts`, `kitSvg(def, name, num)`, `pbgs()` and `pbgStyle(bg, size)` for the logo, kit and background tabs
 2. Copy `.github/workflows/art.yml` and `tools/art-intake.js` from the Habit League repo into the app's repo. Then create the labels `art` and `art-draft` there.
 3. Add an entry to `PROJECTS` at the top of the script in `index.html`, for example:
 

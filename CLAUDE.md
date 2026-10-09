@@ -24,6 +24,14 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - The engine page is fetched and run via `srcdoc` with a guard script that gives it in-memory `localStorage` and no service worker. Keep this: the app saves on every render and re-renders every minute, so an unguarded hidden copy overwrites real progress made in the app.
   - Only `svg` is required; the parts kit appears when the engine has both `build` and `parts`.
   - Phase 1 adds `logos()`, `logoGrid(id)`, `logoSvg(grid)`, `kits()`, `kitPatterns`, `kitFonts`, `kitSvg(def, name, num)`, `pbgs()` and `pbgStyle(bg, size)`.
+  - Phase 1 details (as built in the app):
+    - `logoGrid(id)` returns a fresh 16×16 copy (cells `'#rrggbb'` or null); `logoSvg(grid)` draws with the app's `gridSvg` (smoothed and shaded).
+    - `kits()` leaves out fields a kit doesn't use and skips the hidden `scout` kit. `kitSvg` also accepts a kit id. The Home kit's number outline (none) and the Away kit's dark one only apply when passed by id; a definition without `id` gets a unique internal id.
+    - `kitFonts` lists all nine fonts the app loads, not only the ones kits use today. To preview them here, load the same font files (e.g. from `/habit-league/fonts/`). No `font` means the default bold sans.
+    - `pbgs()` adds `base` to custom backgrounds. Brick wall's colour inside its data URL is written `%23140a06`; the app's swap handles `#` and `%23`, so match both. Classic uses `var(--panel2)`/`var(--well)`, and `transparent` stays a keyword.
+    - `pbgStyle(bg, size)` returns `background:…;background-size:…` with `var(--…)` resolved to the current atmosphere. It can contain double quotes, so set it with `el.style.cssText` or escape `"`. It's a still image (no Holo/Snowfall animation).
+    - Swap rules: an 8-digit key matches only that colour; a 6-digit key matches 6- and 8-digit colours and keeps the alpha.
+  - Intake extras: a pbg `base` must be a built-in background and every `colors` key must be in it; kit `sw` 0–8, `fw` whole 100–900; colours saved lowercase; the same id may be used in different types. Previews: heads `art/previews/<id>.png`, others `<type>-<id>.png`. `art/drafts.json` can hold any type, so check `type`.
 - **Ids** are 2 to 20 lowercase letters or numbers. An opened design keeps its id only while its name is unchanged, so renaming makes a new design. Names that belong to the app's built-in heads (in `HL_ART.heads()` but not in `art/library.json`) are blocked, because the intake rejects them.
   - The API is defined in the Habit League repo (`Krismcnulty/habit-league`, `index.html`, search `HL_ART`). Change both sides together.
   - Without an engine, `basicSvg()` renders the preview.
