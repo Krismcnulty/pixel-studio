@@ -45,7 +45,7 @@ header a{color:var(--muted);font-size:13px}
 .prev{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .av{border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#232c4a,#0c1226);border:1px solid var(--line);display:grid;place-items:center}
 .av svg{width:100%;height:100%;display:block}
-.big{width:150px;height:150px}.sm{width:52px;height:52px}
+.big{width:150px;height:150px}.sm{width:var(--card,52px);height:var(--card,52px)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin:8px 0 3px}
 input,select,textarea{width:100%;background:var(--well);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -185,7 +185,7 @@ const PROJECTS={
   'habit-league':{name:'Habit League',note:'Player heads',type:'head',sizes:[32],outline:'always',fields:true,
     engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',library:'/habit-league/art/library.json',legacyKey:'hlStudio.v1',
     cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
-    pvTitle:'Preview (as the app draws it)',pvNote:'Card size, next to existing heads'},
+    pvTitle:'Preview (as the app draws it)',cardPx:64,pvNote:'Card size in the app (64px), next to existing heads'},
   'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
     cvNote:'Free drawing at any size. Turn Auto outline on for a dark 1-pixel outline like the game art. Mirror copies each pixel to the other side. Right-click erases on a computer.',
     pvTitle:'Preview',pvNote:'Small size'}
@@ -459,7 +459,7 @@ const HEAD_RULES=`Rules (Habit League art guide):
 - Hair sets (highlight, base, dark): #4d4641 #1b120c #120c08 | #8c6850 #6b3e1f #462814 | #edd08b #e8c36a #977f45 | #a7a7a7 #8e8e8e #5c5c5c.
 - Accents (light, base, dark): yellow #fde68a #fbbf24 #d97706, red #fca5a5 #ef4444 #991b1b, green #86efac #22c55e #15803d, blue #7dd3fc #3b82f6 #1e3a8a, purple #c4b5fd #a855f7 #6b21a8.
 - Original character only: never a likeness of a real person, and the name mustn't be a real player's nickname.
-- It must read clearly at 52 pixels wide, so keep shapes bold and simple.`;
+- It must read clearly at 64 pixels wide (its size on a player card), so keep shapes bold and simple.`;
 function aiPrompt(desc){const n=N,head=P.type==='head',base=$('aiBase').checked&&grid.flat().some(Boolean);
   let cur='';if(base){try{const d=encode();cur=JSON.stringify({pal:d.pal,px:d.px})}catch(_){}}
   const shape=head?`{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[32 strings of 32 characters]}`
@@ -532,7 +532,7 @@ async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-leag
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
   $('kitCard').hidden=!(ART&&ART.parts&&ART.build);$('headStart').hidden=!ART;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
-  $('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
+  document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
   $('fName').placeholder=P.type==='head'?'e.g. Sky Hook':'e.g. Club badge';
   $('size').innerHTML=P.sizes.map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=P.sizes.length<2;
   if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(ART.parts&&ART.build)setupKit()}
