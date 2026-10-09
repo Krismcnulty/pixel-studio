@@ -31,7 +31,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - Any change to the design format must stay compatible with `art-intake.js`.
 
 - **Canvas input.** Zoom is a CSS transform on `#cv` inside `#cvWrap`; `cell()` uses the transformed rect, so drawing maths needs no zoom handling. A second finger cancels the stroke in progress and starts a pinch. Fill, pick and replace act on pointer release, so a pinch never triggers them.
-- **Card size.** `cardPx` in a project sets the small preview (and the AI prompt's "reads clearly at" size) to the size heads appear on a player card in the app. Habit League is 64px; change it whenever the app's card size changes.
+- **Card size.** `cardPx`, `cardBorder` and `cardScale` make the small previews match a player card in the app: Habit League cards are a 68px frame with a 2px border, and heads are drawn with `HL_ART.svg(grid, 2)`, which gives every art pixel exactly 2 screen pixels (52 to 64px per head). Without a scale, `svg(grid)` stretches to fill its box as before. Change these whenever the app's card changes.
 - **Skin/hair swap** matches the drawing against "families" of aligned colour ramps: the guide's palette tables, plus ramps worked out from heads the engine draws (`ART.base` per skin, `ART.build` per hair colour).
 
 ## Related

@@ -45,7 +45,7 @@ header a{color:var(--muted);font-size:13px}
 .prev{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .av{border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#232c4a,#0c1226);border:1px solid var(--line);display:grid;place-items:center}
 .av svg{width:100%;height:100%;display:block}
-.big{width:150px;height:150px}.sm{width:var(--card,52px);height:var(--card,52px)}
+.big{width:150px;height:150px}.sm{width:var(--card,52px);height:var(--card,52px);border-width:var(--cardB,1px)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin:8px 0 3px}
 input,select,textarea{width:100%;background:var(--well);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -185,7 +185,7 @@ const PROJECTS={
   'habit-league':{name:'Habit League',note:'Player heads',type:'head',sizes:[32],outline:'always',fields:true,
     engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',library:'/habit-league/art/library.json',legacyKey:'hlStudio.v1',
     cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
-    pvTitle:'Preview (as the app draws it)',cardPx:64,pvNote:'Card size in the app (64px), next to existing heads'},
+    pvTitle:'Preview (as the app draws it)',cardPx:68,cardBorder:2,cardScale:2,pvNote:'Exactly as on a player card in the app, next to existing heads'},
   'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
     cvNote:'Free drawing at any size. Turn Auto outline on for a dark 1-pixel outline like the game art. Mirror copies each pixel to the other side. Right-click erases on a computer.',
     pvTitle:'Preview',pvNote:'Small size'}
@@ -237,9 +237,11 @@ function draw(){const W=cv.width,s=W/N,R=v=>Math.round(v);cx.clearRect(0,0,W,W);
   if(showGrid&&N<=64){cx.strokeStyle='rgba(255,255,255,.07)';cx.lineWidth=1;for(let i=1;i<N;i++){const p=R(i*s)+.5;cx.beginPath();cx.moveTo(p,0);cx.lineTo(p,W);cx.stroke();cx.beginPath();cx.moveTo(0,p);cx.lineTo(W,p);cx.stroke()}
     cx.strokeStyle='rgba(255,122,26,.25)';cx.beginPath();cx.moveTo(W/2,0);cx.lineTo(W/2,W);cx.stroke()}
   preview();wipLater()}
-function preview(){const svg=svgOf(grid);$('pvBig').innerHTML=svg;
+// Card-size previews use the app's whole-pixel scale (svg(grid, scale)), so they match a player card exactly.
+const cardSvg=G=>ART&&P.type==='head'&&P.cardScale&&G.length===32?ART.svg(G,P.cardScale):svgOf(G);
+function preview(){$('pvBig').innerHTML=svgOf(grid);
   const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)):[];
-  $('pvRow').innerHTML=`<div class="av sm">${svg}</div>`+others.map(id=>`<div class="av sm">${ART.svg(ART.headGrid(id))}</div>`).join('')}
+  $('pvRow').innerHTML=`<div class="av sm">${cardSvg(grid)}</div>`+others.map(id=>`<div class="av sm">${cardSvg(ART.headGrid(id))}</div>`).join('')}
 function push(){hist.push(clone(grid));if(hist.length>80)hist.shift();fut=[];btns()}
 function btns(){$('undo').disabled=!hist.length;$('redo').disabled=!fut.length}
 function setPx(x,y,c){if(x<0||y<0||x>=N||y>=N)return;grid[y][x]=c;if(mirror)grid[y][N-1-x]=c}
@@ -354,7 +356,7 @@ $('swSkinGo').onclick=()=>swap('skin',$('swSkin').value);$('swHairGo').onclick=(
 const NAMES={bald:'Bald',buzz:'Buzz cut',short:'Short',flat:'Flat top',curly:'Curly',coils:'Tight curls',spiky:'Spiky',mohawk:'Mohawk',afro:'Afro',topknot:'Top knot',long:'Long',horseshoe:'Balding (sides)',
   smile:'Smile',grin:'Grin',open:'Open',beard:'Full beard',stache:'Moustache',thinstache:'Thin moustache',goatee:'Goatee',vandyke:'Chin beard',glasses:'Glasses',shades:'Shades',goggles:'Goggles',sportspecs:'Sports goggles',scowl:'Scowl',cap:'Backwards cap',lephat:'Top hat',crown:'Crown'};
 function kit(){return{skin:+$('kSkin').value,shape:$('kShape').value,style:$('kStyle').value,hair:$('kHair').value,band:$('kBand').value,mouth:$('kMouth').value,fx:[...document.querySelectorAll('#kExtras input:checked')].map(i=>i.value)}}
-function kitPrev(){$('kPrev').innerHTML=ART.svg(ART.build(kit()))}
+function kitPrev(){$('kPrev').innerHTML=cardSvg(ART.build(kit()))}
 function setupKit(){const K=ART.parts;
   $('kSkin').innerHTML=ART.skins.map((s,i)=>`<option value="${i}">Skin ${i+1}</option>`).join('');$('kSkin').value='2';
   $('kShape').innerHTML=ART.shapes.map(s=>`<option value="${s}">${s[0].toUpperCase()+s.slice(1)}</option>`).join('');
@@ -532,7 +534,7 @@ async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-leag
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
   $('kitCard').hidden=!(ART&&ART.parts&&ART.build);$('headStart').hidden=!ART;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
-  document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
+  document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');document.documentElement.style.setProperty('--cardB',(P.cardBorder||1)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
   $('fName').placeholder=P.type==='head'?'e.g. Sky Hook':'e.g. Club badge';
   $('size').innerHTML=P.sizes.map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=P.sizes.length<2;
   if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(ART.parts&&ART.build)setupKit()}
