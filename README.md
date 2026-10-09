@@ -21,7 +21,7 @@ The first time you open the Habit League project, any designs saved in the old H
 - **Team Logo:** 16×16 pixel art. The app smooths and shades logos, so the preview shows it exactly as the app does.
 - **Player Kits:** pick an existing kit to start from, then change the shirt, trim and number colours, number outline, pattern and number font.
 - **Player Backgrounds:** pick an existing background, then swap any of its colours. Layout, texture and animation stay the same.
-- **Player Heads:** 32×32 pixel art, as before.
+- **Player Heads:** 64×64 pixel art for new heads, turned slightly to the left with more detail. Old 32×32 heads still open; **⤢ Double to 64×64** gets one ready to redraw in the new style. The parts kit is retired here (it only made old-style heads).
 - **Arena** (atmosphere, scoreboard, court, bench) and **Effects** (ball, shot style, win celebration, sound pack) are coming in later phases.
 
 Each tab keeps its own designs, folders and autosave, and submits to the app in the same way. Pasting a design's code into the wrong tab tells you which tab it belongs in.
@@ -37,7 +37,7 @@ Previews are drawn by the app itself. Animated backgrounds (Holo, Snowfall) show
 - **Autosave:** the design in progress and its details are kept in the browser for each project and tab, so a closed tab or a refresh loses nothing.
 - Auto outline: always on for Habit League heads, off for logos (the app shades them itself), optional in the Sketchbook.
 - **Describe it (AI)** (heads, logos and the Sketchbook): type what you want (e.g. "zombie") and press **Copy AI prompt**. It copies a prompt with the art rules and your current drawing. Paste it into Claude, copy the reply, then press **Paste result**. Pasting forgives the usual AI slips: text around the code, rows of the wrong length, and letters missing from the palette.
-- Start from an empty grid, an existing head or logo, the parts kit (heads), an image (cropped, shrunk, snapped to the palette), or pasted code.
+- Start from an empty grid, an existing head or logo, an image (cropped and shrunk, then snapped to the palette, kept as is, or reduced to 24/16/12/8 colours for crisper features), or pasted code.
 - **My designs** has folders and is saved in the browser, separately for each tab. **Download folder** and **Open file** move designs between devices as `.json` files.
 - **Submit to app** and **Save draft to repo** open a ready-made GitHub issue on the project's repo. Its art intake action checks the design, commits it and replies with a preview.
 

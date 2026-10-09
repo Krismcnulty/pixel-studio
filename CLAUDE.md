@@ -10,7 +10,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - `sketchbook` is free drawing at 16 to 64 pixels, for football badges, kits and ideas.
   - `test` (Testing area) is for experiments at 32/48/64. With `compare:true`, an uploaded image is converted at every size (`compare()`, using `fromImage`) and shown side by side at card (68px) and profile (134px) size; **Edit** loads one into the canvas. Nothing submits anywhere.
 - **Tabs (kinds).** A project with `kinds` shows tabs from `TABS` (Habit League: Team / Arena / Effects, matching the app's Locker). Each tab's settings in `KINDS` are merged over the project's into `P`, and `openKind()` sets up its editor. `openProject()` only loads the engine.
-  - `mode:'pixel'` tabs use the pixel editor: heads (32×32) and team logos (16×16).
+  - `mode:'pixel'` tabs use the pixel editor: heads (64×64 for new heads, 32×32 for old ones) and team logos (16×16).
   - `mode:'form'` tabs start from an existing item and change its settings: kits (colours, pattern, number font) and player backgrounds (swap the hex colours in an existing `--pbg`). `FORM` holds the current settings.
   - `soon:n` tabs are shown but not usable yet (Arena = phase 2, Effects = phase 3).
   - Each tab has its own storage: heads keep `pixelStudio.v1.habit-league`; other tabs add `.<kind>` (e.g. `pixelStudio.v1.habit-league.kit`), with `.folders` and `.wip` after that.
@@ -37,7 +37,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - The API is defined in the Habit League repo (`Krismcnulty/habit-league`, `index.html`, search `HL_ART`). Change both sides together.
   - Without an engine, `basicSvg()` renders the preview.
 - **Designs** are JSON shaped like `{type, id, name, pal:{letter:hex}, px:[rows]}`.
-  - Heads add `rarity` (`rare`/`epic`/`leg`) and `where` (`shop`/`none`), and must be 32×32 with no drawn outline (the app adds it).
+  - Heads add `rarity` (`rare`/`epic`/`leg`) and `where` (`shop`/`none`), with no drawn outline (the app adds it). New heads are 64×64, turned slightly to the left; old ones are 32×32 straight on and still open (⤢ Double to 64×64 prepares one for redrawing, keeping its identity if it's a library head).
   - Sketchbook designs are `type:'sprite'` with an `outline` boolean.
   - Logos: `type:'logo'`, 16×16, same encoding as heads.
   - Kits: `{type:'kit', id, name, rarity, where, b, t, num, pat, ns?, sw?, font?, fw?}`.
@@ -60,13 +60,15 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - Any change to the design format must stay compatible with `art-intake.js`.
 
 - **Canvas input.** Zoom is a CSS transform on `#cv` inside `#cvWrap`; `cell()` uses the transformed rect, so drawing maths needs no zoom handling. A second finger cancels the stroke in progress and starts a pinch. Fill, pick and replace act on pointer release, so a pinch never triggers them.
-- **Card size.** `cardPx`, `cardBorder` and `cardScale` make the small previews match a player card in the app: Habit League cards are a 68px frame with a 2px border, and heads are drawn with `HL_ART.svg(grid, 2)`, which gives every art pixel exactly 2 screen pixels (52 to 64px per head). Without a scale, `svg(grid)` stretches to fill its box as before. Change these whenever the app's card changes.
+- **Card size.** `cardPx`, `cardBorder` and `cardScale` make the small previews match a player card in the app: Habit League cards are a 68px frame with a 2px border. `cardScale` is screen pixels per art pixel for a 32×32 head (2); `cardSvg()` uses `cardScale*32/size`, so a 64×64 head is drawn at 1. Without a scale, `svg(grid)` stretches to fill its box. Change these whenever the app's card changes.
+- **64×64 heads.** `headOk(n)` is true for 32, and for 64 once the app lists it in `HL_ART.headSizes`; until then 64×64 heads are previewed with `basicSvg`. The parts kit card is hidden (it only builds old-style 32×32 heads; the app keeps it for scouted players). `HEAD_RULES` is the 64×64 AI rule set, `HEAD_RULES_32` the old one, picked by the grid size.
+- **Image import colours.** Snap to the palette, keep its own colours, or reduce to 24/16/12/8 colours (`kmeans()`), which gives the crispest features.
 - **Skin/hair swap** matches the drawing against "families" of aligned colour ramps: the guide's palette tables, plus ramps worked out from heads the engine draws (`ART.base` per skin, `ART.build` per hair colour).
 
 ## Related
 
 - The original HL Studio (`/habit-league/studio.html` in the Habit League repo) stays as it is for now. Kris plans to switch to this one eventually.
-- The art style rules are in the claude.ai project doc "Pixel Art Guide": heads (32×32, lit from the top left, five skin tones, three hair tones, no shoulders, original characters only), team logos (16×16, flat colours, no outline or shading), kits and player backgrounds. Keep the AI prompt rules (`HEAD_RULES`, `LOGO_RULES`) in step with it.
+- The art style rules are in the claude.ai project doc "Pixel Art Guide": heads (64×64, turned slightly left, lit from the top left, clearly defined features, 5–6 skin and 3–4 hair tones, no shoulders, original characters only; old 32×32 heads documented too), team logos (16×16, flat colours, no outline or shading), kits and player backgrounds. Keep the AI prompt rules (`HEAD_RULES`, `LOGO_RULES`) in step with it.
 - A football version of Habit League is planned. When it exists, it gets its own repo and a new `PROJECTS` entry here (see README).
 
 ## Working rules
