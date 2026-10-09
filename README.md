@@ -8,12 +8,22 @@ Pick a project from the menu at the top. Each project keeps its own designs and 
 
 | Project | What it's for | Engine | Submits to |
 |---|---|---|---|
-| Habit League | 32×32 player heads | Habit League's own drawing code (`/habit-league/index.html`) | `Krismcnulty/habit-league` |
+| Habit League | Tabs for each cosmetic, like the app's Locker: Team (logo, kits, player backgrounds, heads) now; Arena and Effects later | Habit League's own drawing code (`/habit-league/index.html`) | `Krismcnulty/habit-league` |
 | Sketchbook | Anything at 16, 24, 32, 48 or 64 pixels: football badges, kits, ideas | Built in | Nothing (save, PNG and files only) |
 
 For a project with an engine, the studio loads that app in a hidden frame and draws with its code (`window.HL_ART`). The preview matches the app exactly, and the parts kit and "existing head" come from the app. This only works because every app is on the same site (krismcnulty.github.io).
 
 The first time you open the Habit League project, any designs saved in the old HL Studio (`/habit-league/studio`) are copied across, folders included.
+
+## Habit League tabs
+
+- **Team Logo:** 16×16 pixel art. The app smooths and shades logos, so the preview shows it exactly as the app does.
+- **Player Kits:** pick an existing kit to start from, then change the shirt, trim and number colours, number outline, pattern and number font.
+- **Player Backgrounds:** pick an existing background, then swap any of its colours. Layout, texture and animation stay the same.
+- **Player Heads:** 32×32 pixel art, as before.
+- **Arena** (atmosphere, scoreboard, court, bench) and **Effects** (ball, shot style, win celebration, sound pack) are coming in later phases.
+
+Each tab keeps its own designs and folders, and submits to the app in the same way.
 
 ## Features
 

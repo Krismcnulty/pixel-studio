@@ -8,6 +8,12 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
 - `PROJECTS` at the top of the script lists the apps the studio makes art for:
   - `habit-league` draws player heads with Habit League's own code.
   - `sketchbook` is free drawing at 16 to 64 pixels, for football badges, kits and ideas.
+- **Tabs (kinds).** A project with `kinds` shows tabs from `TABS` (Habit League: Team / Arena / Effects, matching the app's Locker). Each tab's settings in `KINDS` are merged over the project's into `P`, and `openKind()` sets up its editor. `openProject()` only loads the engine.
+  - `mode:'pixel'` tabs use the pixel editor: heads (32×32) and team logos (16×16).
+  - `mode:'form'` tabs start from an existing item and change its settings: kits (colours, pattern, number font) and player backgrounds (swap the hex colours in an existing `--pbg`). `FORM` holds the current settings.
+  - `soon:n` tabs are shown but not usable yet (Arena = phase 2, Effects = phase 3).
+  - Each tab has its own storage: heads keep `pixelStudio.v1.habit-league`; other tabs add `.<kind>` (e.g. `pixelStudio.v1.habit-league.kit`), with `.folders` and `.wip` after that.
+  - Tabs that need engine functions the app doesn't have yet (`need`) show a note instead of the editor.
 - **Engine.** A project with `engine` loads that app in a hidden iframe and reads `window.HL_ART`.
   - What the engine provides:
     - `svg(grid)` and `headGrid(id)`
@@ -17,12 +23,16 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - This only works because every app is on the same origin (krismcnulty.github.io).
   - The engine page is fetched and run via `srcdoc` with a guard script that gives it in-memory `localStorage` and no service worker. Keep this: the app saves on every render and re-renders every minute, so an unguarded hidden copy overwrites real progress made in the app.
   - Only `svg` is required; the parts kit appears when the engine has both `build` and `parts`.
+  - Phase 1 adds `logos()`, `logoGrid(id)`, `logoSvg(grid)`, `kits()`, `kitPatterns`, `kitFonts`, `kitSvg(def, name, num)`, `pbgs()` and `pbgStyle(bg, size)`.
 - **Ids** are 2 to 20 lowercase letters or numbers. An opened design keeps its id only while its name is unchanged, so renaming makes a new design. Names that belong to the app's built-in heads (in `HL_ART.heads()` but not in `art/library.json`) are blocked, because the intake rejects them.
   - The API is defined in the Habit League repo (`Krismcnulty/habit-league`, `index.html`, search `HL_ART`). Change both sides together.
   - Without an engine, `basicSvg()` renders the preview.
 - **Designs** are JSON shaped like `{type, id, name, pal:{letter:hex}, px:[rows]}`.
   - Heads add `rarity` (`rare`/`epic`/`leg`) and `where` (`shop`/`none`), and must be 32×32 with no drawn outline (the app adds it).
   - Sketchbook designs are `type:'sprite'` with an `outline` boolean.
+  - Logos: `type:'logo'`, 16×16, same encoding as heads.
+  - Kits: `{type:'kit', id, name, rarity, where, b, t, num, pat, ns?, sw?, font?, fw?}`.
+  - Player backgrounds: `{type:'pbg', id, name, rarity, where, base, colors:{'#oldhex':'#newhex'}}`. Keys are the base's colours as written (6 or 8 digits, lowercase); an 8-digit colour keeps its alpha.
 - **Storage** is localStorage `pixelStudio.v1.<project>`, with folders in `pixelStudio.v1.<project>.folders`.
   - The drawing in progress autosaves to `pixelStudio.v1.<project>.wip` (from `draw()`, debounced, and on pagehide). `openProject` flushes the old project's save before switching.
   - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.

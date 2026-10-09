@@ -72,6 +72,17 @@ textarea{min-height:110px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;r
 .toast.on{opacity:1}
 .banner{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px;color:var(--muted);margin-bottom:12px}
 #loading{padding:40px;text-align:center;color:var(--muted)}
+#tabs{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 12px}
+.tg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tgl{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.tab{padding:6px 11px;border-radius:99px;background:var(--well);border:1px solid var(--line);font-size:13px;font-weight:700}
+.tab.on{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 18%,var(--well))}
+.tab.soon{opacity:.5}.tab small{font-size:10px;color:var(--muted);margin-left:4px;font-weight:700}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.slot{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;background:var(--well);border:1px solid var(--line);font:11px ui-monospace,monospace;color:var(--muted)}
+.slot input{width:44px;height:32px;padding:2px;flex:none}.slot .old{width:16px;height:16px;border-radius:5px;border:1px solid rgba(255,255,255,.25);flex:none}
+.slot.ch{border-color:var(--orange)}
+.fcol{display:flex;align-items:center;gap:6px}.fcol input[type=color]{width:52px;height:36px;padding:2px;flex:none}.fcol input[type=checkbox]{width:auto}
 iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;visibility:hidden}
 </style>
 </head>
@@ -79,10 +90,13 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
 <div class="wrap">
   <header><h1>Pixel Studio</h1><select id="proj" aria-label="Project"></select><span class="note" id="projNote"></span><span class="sp"></span><a id="appLink" href="#" target="_blank" rel="noopener">Open the app →</a></header>
   <div class="banner" id="banner" hidden></div>
+  <nav id="tabs" hidden aria-label="Cosmetic type"></nav>
   <div id="loading">Loading…</div>
   <div id="ui" hidden>
   <div class="grid">
     <div>
+      <div id="formLeft" hidden><div class="card"><h2 id="formTitle">Design</h2><div id="formBody"></div></div></div>
+      <div id="pixLeft">
       <div class="card">
         <div class="tools">
           <button class="tb on" data-tool="pen">✏️ Pen<kbd>B</kbd></button><button class="tb" data-tool="erase">🧽 Erase<kbd>E</kbd></button><button class="tb" data-tool="fill">🪣 Fill<kbd>G</kbd></button><button class="tb" data-tool="pick">💧 Pick<kbd>I</kbd></button><button class="tb" data-tool="swap" title="Tap a colour on the drawing to change it everywhere to the selected colour">🔁 Replace<kbd>R</kbd></button>
@@ -99,6 +113,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <div id="swapBox"><div class="row" style="margin-top:12px"><label style="margin:0;min-width:74px">Swap skin</label><select id="swSkin" style="flex:1;width:auto"></select><button class="btn" id="swSkinGo">Swap</button></div>
           <div class="row" style="margin-top:6px"><label style="margin:0;min-width:74px">Swap hair</label><select id="swHair" style="flex:1;width:auto"></select><button class="btn" id="swHairGo">Swap</button></div>
           <p class="note" style="margin:6px 0 0">Changes every skin or hair tone at once and keeps the shading. <b>Tint</b> uses the selected colour, e.g. pick a green and tint the skin for a zombie. <b>🔁 Replace</b> (top) changes any single colour everywhere.</p></div>
+      </div>
       </div>
     </div>
     <div>
@@ -129,10 +144,10 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
           <button class="btn primary" id="kBuild">Build head</button><button class="btn" id="kStamp">Stamp onto drawing</button></div>
         <p class="note" style="margin:6px 0 0"><b>Build</b> replaces the grid with a head made from these parts. <b>Stamp</b> adds just the hair, headband, mouth and extras on top of what you've drawn.</p>
       </div>
-      <div class="card">
+      <div class="card" id="startCard">
         <h2>Start from</h2>
         <div class="row"><select id="size" style="width:auto"></select><button class="btn" id="startEmpty">Empty grid</button></div>
-        <div id="headStart"><label>An existing head</label>
+        <div id="headStart"><label id="startLabel">An existing head</label>
         <div class="row"><select id="baseHead" style="flex:1"></select><button class="btn" id="startHead">Load</button></div></div>
         <label>An image (AI art, a drawing or a photo)</label>
         <input type="file" id="imgFile" accept="image/*">
@@ -182,14 +197,29 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
    To add the football app later, add an entry here: see README.md.
 --------------------------------------------------------------------------- */
 const PROJECTS={
-  'habit-league':{name:'Habit League',note:'Player heads',type:'head',sizes:[32],outline:'always',fields:true,
-    engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',library:'/habit-league/art/library.json',legacyKey:'hlStudio.v1',
-    cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
-    pvTitle:'Preview (as the app draws it)',cardPx:68,cardBorder:2,cardScale:2,pvNote:'Exactly as on a player card in the app, next to existing heads'},
+  'habit-league':{name:'Habit League',fields:true,kinds:'HL',defaultKind:'head',
+    engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',library:'/habit-league/art/library.json'},
   'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
     cvNote:'Free drawing at any size. Turn Auto outline on for a dark 1-pixel outline like the game art. Mirror copies each pixel to the other side. Right-click erases on a computer.',
     pvTitle:'Preview',pvNote:'Small size'}
 };
+/* Kinds: the cosmetic types a project has, shown as tabs. Each kind's settings override the project's.
+   mode 'pixel' uses the pixel editor; mode 'form' starts from an existing item and changes its settings, previewed with the app's own code.
+   soon: the phase a tab is planned for (shown but not usable yet). */
+const TABS={HL:[['Team',[['logo','Team Logo'],['kit','Player Kits'],['pbg','Player Backgrounds'],['head','Player Heads']]],
+  ['Arena',[['atm','Atmosphere'],['board','Scoreboard'],['court','Court'],['bench','Bench']]],
+  ['Effects',[['ball','Ball'],['shot','Shot Style'],['cel','Win Celebration'],['snd','Sound Pack']]]]};
+const KINDS={
+  head:{type:'head',mode:'pixel',sizes:[32],outline:'always',note:'Player heads',legacyKey:'hlStudio.v1',ai:true,
+    cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
+    pvTitle:'Preview (as the app draws it)',cardPx:68,cardBorder:2,cardScale:2,pvNote:'Exactly as on a player card in the app, next to existing heads'},
+  logo:{type:'logo',mode:'pixel',sizes:[16],outline:'never',note:'Team logos',ai:true,
+    cvNote:'Draw the 16×16 team logo. The app smooths the edges and adds light and shade when it shows a logo, so judge it by the preview. Mirror copies each pixel to the other side. Right-click erases on a computer.',
+    pvTitle:'Preview (as the app draws it)',cardPx:68,pvNote:'Next to existing logos'},
+  kit:{type:'kit',mode:'form',note:'Player kits',pvTitle:'Preview (as the app draws it)',cardPx:68,pvNote:'Next to existing kits',need:['kits','kitSvg']},
+  pbg:{type:'pbg',mode:'form',note:'Player backgrounds',pvTitle:'Preview (as the app draws it)',cardPx:68,cardBorder:2,cardScale:2,pvNote:'Behind player heads, as on cards',need:['pbgs','pbgStyle']},
+  atm:{soon:2},board:{soon:2},court:{soon:2},bench:{soon:2},ball:{soon:3},shot:{soon:3},cel:{soon:3},snd:{soon:3}};
+const TYPE_NAMES={head:'player head',logo:'team logo',kit:'kit',pbg:'player background',sprite:'Sketchbook drawing'};
 const BASE_KEY='pixelStudio.v1';
 const DEF_PAL={
   skin:['#fadec6','#f8d6b8','#f6d2b4','#c89475','#8c6550','#f5d2b2','#f1c49e','#eebd94','#bf845f','#855a40','#e5bd99','#dba87c','#d39a6a','#a56b44','#74492e',
@@ -204,7 +234,7 @@ const DEF_PAL={
 };
 const OUTLINE='#140b06';
 
-let PID,P,KEY,ART=null,N=32,grid,tool='pen',mirror=false,showGrid=true,color='#d39a6a',hist=[],fut=[],curId=null,curName='',folder='All',curFolder='Unsorted',DRAFTS=[],LIB=null;
+let PID,P,KEY,KIND=null,FORM=null,ART=null,N=32,grid,tool='pen',mirror=false,showGrid=true,color='#d39a6a',hist=[],fut=[],curId=null,curName='',folder='All',curFolder='Unsorted',DRAFTS=[],LIB=null;
 const $=id=>document.getElementById(id);
 const empty=(n=N)=>Array.from({length:n},()=>Array(n).fill(null));
 const clone=g=>g.map(r=>r.slice());
@@ -215,6 +245,10 @@ const toHex=([r,g,b])=>'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))
 function cdist([r1,g1,b1],[r2,g2,b2]){const rm=(r1+r2)/2,dr=r1-r2,dg=g1-g2,db=b1-b2;return Math.sqrt((2+rm/256)*dr*dr+4*dg*dg+(2+(255-rm)/256)*db*db)}
 const N4=[[1,0],[-1,0],[0,1],[0,-1]];
 const useOutline=()=>P.outline==='always'||(P.outline==='toggle'&&$('outline').checked);
+// What the engine offers for each type: the built-in items, and (for pixel types) their grids.
+const lists={head:()=>ART&&ART.heads?ART.heads():[],logo:()=>ART&&ART.logos?ART.logos():[],kit:()=>ART&&ART.kits?ART.kits():[],pbg:()=>ART&&ART.pbgs?ART.pbgs():[]};
+const gridOf={head:id=>ART.headGrid(id),logo:id=>ART.logoGrid(id)},canGrid={head:()=>has('heads','headGrid'),logo:()=>has('logos','logoGrid')};
+const has=(...fs)=>!!ART&&fs.every(f=>ART[f]);
 function setGrid(g){grid=g;N=g.length}
 
 // ---- built-in renderer (used when there's no app engine, or for non-head sizes) ----
@@ -226,7 +260,8 @@ function basicSvg(G,outline=useOutline()){const n=G.length,out=G.map(r=>r.slice(
   for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(out[y][x])r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${out[y][x]}"/>`;
   return`<svg viewBox="${ox} ${oy} ${side} ${side}" shape-rendering="crispEdges">${r}</svg>`}
 // A saved sprite carries its own outline setting; the drawing on the canvas follows the Auto outline box.
-const svgOf=G=>(ART&&P.type==='head'&&G.length===32)?ART.svg(G):basicSvg(G,P.outline==='always'||(typeof G.outline==='boolean'?G.outline:useOutline()));
+const svgOf=G=>(ART&&P.type==='head'&&G.length===32)?ART.svg(G):(P.type==='logo'&&has('logoSvg')&&G.length===16)?ART.logoSvg(G)
+  :basicSvg(G,P.outline!=='never'&&(P.outline==='always'||(typeof G.outline==='boolean'?G.outline:useOutline())));
 
 // ---- drawing ----
 const cv=$('cv'),cx=cv.getContext('2d');
@@ -239,9 +274,10 @@ function draw(){const W=cv.width,s=W/N,R=v=>Math.round(v);cx.clearRect(0,0,W,W);
   preview();wipLater()}
 // Card-size previews use the app's whole-pixel scale (svg(grid, scale)), so they match a player card exactly.
 const cardSvg=G=>ART&&P.type==='head'&&P.cardScale&&G.length===32?ART.svg(G,P.cardScale):svgOf(G);
-function preview(){$('pvBig').innerHTML=svgOf(grid);
-  const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)):[];
-  $('pvRow').innerHTML=`<div class="av sm">${cardSvg(grid)}</div>`+others.map(id=>`<div class="av sm">${cardSvg(ART.headGrid(id))}</div>`).join('')}
+function preview(){if(P.mode==='form')return formPreview();$('pvBig').style.cssText='';$('pvBig').innerHTML=svgOf(grid);
+  const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)).map(id=>ART.headGrid(id))
+    :P.type==='logo'&&has('logos','logoGrid')?ART.logos().slice(0,3).map(l=>ART.logoGrid(l.id)):[];
+  $('pvRow').innerHTML=`<div class="av sm">${cardSvg(grid)}</div>`+others.map(g=>`<div class="av sm">${cardSvg(g)}</div>`).join('')}
 function push(){hist.push(clone(grid));if(hist.length>80)hist.shift();fut=[];btns()}
 function btns(){$('undo').disabled=!hist.length;$('redo').disabled=!fut.length}
 function setPx(x,y,c){if(x<0||y<0||x>=N||y>=N)return;grid[y][x]=c;if(mirror)grid[y][N-1-x]=c}
@@ -301,9 +337,11 @@ addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)
 // ---- autosave: the drawing in progress and its details, per project, so a closed tab or a refresh loses nothing ----
 const WIP=()=>KEY+'.wip';let wipT=null;
 function wipSave(){clearTimeout(wipT);wipT=null;if(!P||!grid||!KEY)return;
-  try{localStorage.setItem(WIP(),JSON.stringify({g:grid,name:$('fName').value,id:curId,cn:curName,rar:$('fRar').value,where:$('fWhere').value,ol:$('outline').checked,f:curFolder,t:Date.now()}))}catch(_){}}
+  try{localStorage.setItem(WIP(),JSON.stringify({g:P.mode==='form'?null:grid,fm:P.mode==='form'?FORM:null,name:$('fName').value,id:curId,cn:curName,rar:$('fRar').value,where:$('fWhere').value,ol:$('outline').checked,f:curFolder,t:Date.now()}))}catch(_){}}
 function wipLater(){clearTimeout(wipT);wipT=setTimeout(wipSave,400)}
 function wipRestore(){let w=null;try{w=JSON.parse(localStorage.getItem(WIP()))}catch(_){}
+  if(P.mode==='form'){if(!w||!w.fm||typeof w.fm!=='object')return 'none';FORM=w.fm;$('fName').value=w.name||'';curId=w.id||null;curName=w.cn||'';curFolder=w.f||'Unsorted';
+    $('fRar').value=w.rar||'epic';$('fWhere').value=w.where||'shop';return 'drawing'}
   if(!w||!Array.isArray(w.g)||!P.sizes.includes(w.g.length)||!w.g.every(r=>Array.isArray(r)&&r.length===w.g.length))return 'none';
   setGrid(w.g.map(r=>r.map(c=>typeof c==='string'&&/^#[0-9a-fA-F]{6}$/.test(c)?c:null)));
   $('fName').value=w.name||'';curId=w.id||null;curName=w.cn||'';curFolder=w.f||'Unsorted';
@@ -375,7 +413,7 @@ $('kStamp').onclick=()=>{if(N!==32)return toast('Stamping needs a 32×32 grid');
 // ---- start points ----
 function load(g){push();setGrid(clone(g));$('size').value=N;zReset();draw();palettes()}
 $('startEmpty').onclick=()=>{load(empty(+$('size').value));curId=null};
-$('startHead').onclick=()=>{load(ART.headGrid($('baseHead').value));curId=null;toast('Loaded: edit away, then save it under a new name')};
+$('startHead').onclick=()=>{load(gridOf[P.type]($('baseHead').value));curId=null;toast('Loaded: edit away, then save it under a new name')};
 
 // ---- image import: crop to the subject, shrink to the grid, snap colours, tidy ----
 $('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{load(fromImage(img,+$('size').value));curId=null;toast('Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
@@ -401,14 +439,15 @@ const slug=s=>{const t=String(s).toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0
 // An opened design keeps its id only while its name is unchanged: renaming it makes a new design and leaves the original alone.
 const idFor=name=>curId&&name===curName&&/^[a-z0-9]{2,20}$/.test(curId)?curId:slug(name);
 // Ids taken by the app's built-in heads (the intake rejects them). Studio-made heads in the library can be replaced, so they don't count.
-const builtIn=id=>!!(ART&&P.type==='head'&&LIB&&ART.heads().some(h=>h.id===id)&&!LIB.includes(id));
-function encode(){const cols=[...new Set(grid.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const libHas=id=>!!LIB&&LIB.some(x=>(x.type||'head')===P.type&&x.id===id);
+const builtIn=id=>!!(ART&&lists[P.type]&&LIB&&lists[P.type]().some(h=>h.id===id)&&!libHas(id));
+function encode(){if(P.mode==='form')return encodeForm();const cols=[...new Set(grid.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   if(cols.length>L.length)throw new Error('Too many colours (max 62)');const pal={};cols.forEach((c,i)=>pal[L[i]]=c);const inv=Object.fromEntries(Object.entries(pal).map(([k,v])=>[v,k]));
   const name=$('fName').value.trim()||'Untitled',d={type:P.type,id:idFor(name),name};
   if(P.fields){d.rarity=$('fRar').value;d.where=$('fWhere').value}
   if(P.outline==='toggle')d.outline=$('outline').checked;
   d.pal=pal;d.px=grid.map(r=>r.map(c=>c?inv[c]:'.').join(''));return d}
-function decode(d){if(!d||!Array.isArray(d.px)||d.px.length<8||d.px.length>64||d.px.some(r=>typeof r!=='string'||r.length!==d.px.length))throw new Error('bad');
+function decode(d){if(P.mode==='form')return decodeForm(d);if(!d||!Array.isArray(d.px)||d.px.length<8||d.px.length>64||d.px.some(r=>typeof r!=='string'||r.length!==d.px.length))throw new Error('bad');
   if(!d.pal||typeof d.pal!=='object'||Object.values(d.pal).some(v=>!/^#[0-9a-fA-F]{6}$/.test(v)))throw new Error('bad');
   const g=d.px.map(r=>[...r].map(c=>c==='.'?null:(d.pal[c]||null)));g.outline=d.outline;return g}
 const strip=d=>{const o={...d};delete o.folder;delete o.saved;return o};
@@ -417,26 +456,30 @@ const keep=l=>{try{localStorage.setItem(KEY,JSON.stringify(l))}catch(_){toast('C
 const foldersOf=()=>{let f=[];try{f=JSON.parse(localStorage.getItem(KEY+'.folders'))||[]}catch(_){}return[...new Set(['Unsorted',...f,...store().map(d=>d.folder||'Unsorted')])]};
 function saveFolders(f){try{localStorage.setItem(KEY+'.folders',JSON.stringify(f))}catch(_){}}
 const meta=d=>P.fields?`${d.rarity} · ${d.where==='shop'?'Shop pool':'held back'}`:`${d.px.length}×${d.px.length}`;
+const thumb=d=>{try{if(P.mode==='form')return formThumb(decodeForm(d));return svgOf(decode(d))}catch(_){return ''}};
 function list(){const all=store(),F=foldersOf();
   $('folders').innerHTML=['All',...F].map(f=>`<button class="chip ${folder===f?'on':''}" data-f="${esc(f)}">${esc(f)} ${f==='All'?all.length:all.filter(d=>(d.folder||'Unsorted')===f).length}</button>`).join('');
   document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{folder=b.dataset.f;list()});
   const shown=all.map((d,i)=>[d,i]).filter(([d])=>folder==='All'||(d.folder||'Unsorted')===folder);
-  $('list').innerHTML=shown.length?shown.map(([d,i])=>{let s='';try{s=svgOf(decode(d))}catch(_){}return`<div class="it"><div class="av">${s}</div><b>${esc(d.name)}<small>${esc(meta(d))}</small></b>
+  $('list').innerHTML=shown.length?shown.map(([d,i])=>{const s=thumb(d);return`<div class="it">${P.mode==='form'?s:`<div class="av">${s}</div>`}<b>${esc(d.name)}<small>${esc(meta(d))}</small></b>
     <select data-mv="${i}" aria-label="Folder">${F.map(f=>`<option ${(d.folder||'Unsorted')===f?'selected':''}>${esc(f)}</option>`).join('')}</select><button class="tb" data-open="${i}">Open</button><button class="tb" data-del="${i}" aria-label="Delete">✕</button></div>`}).join(''):'<p class="note" style="margin:0">Nothing here yet.</p>';
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openD(store()[+b.dataset.open]));
   document.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{const l=store();l[+s.dataset.mv].folder=s.value;keep(l);list()});
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this design?'))return;const l=store();l.splice(+b.dataset.del,1);keep(l);list()})}
-function openD(d){const g=decode(d);if(P.type==='head'&&g.length!==32)return toast('Habit League heads must be 32×32');
+function openD(d){if(d&&d.type&&P.kinds&&d.type!==P.type)return toast(`That's a ${TYPE_NAMES[d.type]||d.type}: open its tab first`);
+  if(P.mode==='form'){FORM=decodeForm(d);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop';
+    renderForm();preview();wipLater();$('code').value=JSON.stringify(strip(d));return}
+  const g=decode(d);if(P.sizes.length===1&&g.length!==P.sizes[0])return toast(`${P.note||'Designs'} here must be ${P.sizes[0]}×${P.sizes[0]}`);
   load(g);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';
   if(P.fields){$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop'}
   if(P.outline==='toggle'){$('outline').checked=d.outline!==false;draw()}
   $('code').value=JSON.stringify(strip(d))}
-const ready2=()=>{if(!grid.flat().some(Boolean)){toast('Draw something first');return false}if(!$('fName').value.trim()){toast('Give it a name first');$('fName').focus();return false}return true};
+const ready2=()=>{if(P.mode==='form'){if(!formReady())return false}else if(!grid.flat().some(Boolean)){toast('Draw something first');return false}if(!$('fName').value.trim()){toast('Give it a name first');$('fName').focus();return false}return true};
 const target=()=>folder!=='All'?folder:curFolder;
 // Saving or submitting under an id that belongs to a different design asks first instead of replacing it.
 function clashOk(d){const x=store().find(y=>y.id===d.id);
   return !x||d.id===curId||confirm(`"${x.name}" is already saved (in ${x.folder||'Unsorted'}) and this would replace it. Replace it?\n\nCancel and change the name to keep both.`)}
-function nameOk(d){if(!builtIn(d.id))return true;toast(`"${d.name}" is taken by one of the app's own heads: pick another name`);$('fName').focus();return false}
+function nameOk(d){if(!builtIn(d.id))return true;toast(`"${d.name}" is taken by one of the app's own ${TYPE_NAMES[P.type]||'item'}s: pick another name`);$('fName').focus();return false}
 $('save').onclick=()=>{if(!ready2())return;const d=encode();if(!nameOk(d)||!clashOk(d))return;curId=d.id;curName=d.name;const l=store().filter(x=>x.id!==d.id);
   l.unshift({...d,folder:target(),saved:Date.now()});keep(l);list();$('code').value=JSON.stringify(d);toast(`Saved to ${target()}`)};
 $('newFolder').onclick=()=>{const n=(prompt('Folder name (e.g. Not ready, Halloween ideas)')||'').trim().slice(0,24);if(!n)return;saveFolders([...new Set([...foldersOf(),n])]);folder=n;curFolder=n;list();toast(`Folder "${n}" added: designs you save now go in it`)};
@@ -445,7 +488,7 @@ $('dl').onclick=()=>{if(!ready2())return;const d=encode();download(`${d.id}.${PI
 $('dlFolder').onclick=()=>{const l=store().filter(d=>folder==='All'||(d.folder||'Unsorted')===folder);if(!l.length)return toast('Nothing in this folder');download(`${slug(folder)}.${PID}.json`,l)};
 $('openFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const d=JSON.parse(await f.text()),arr=Array.isArray(d)?d:[d];arr.forEach(decode);
   const l=store();for(const x of arr){const i=l.findIndex(y=>y.id===x.id),v={...x,folder:x.folder||(folder!=='All'?folder:'Unsorted')};if(i>=0)l[i]=v;else l.push(v)}keep(l);list();if(arr.length===1)openD(arr[0]);toast(`Loaded ${arr.length} design${arr.length>1?'s':''}`)}catch(_){toast("That file isn't a Pixel Studio design")}};
-$('export').onclick=async()=>{if(!grid.flat().some(Boolean))return toast('Draw something first');const t=JSON.stringify(encode());$('code').value=t;
+$('export').onclick=async()=>{if(P.mode!=='form'&&!grid.flat().some(Boolean))return toast('Draw something first');const t=JSON.stringify(encode());$('code').value=t;
   try{await navigator.clipboard.writeText(t);toast('Code copied')}catch(_){$('code').select();toast('Code is in the box below: copy it from there')}};
 $('import').onclick=()=>loadText($('code').value);
 
@@ -462,13 +505,19 @@ const HEAD_RULES=`Rules (Habit League art guide):
 - Accents (light, base, dark): yellow #fde68a #fbbf24 #d97706, red #fca5a5 #ef4444 #991b1b, green #86efac #22c55e #15803d, blue #7dd3fc #3b82f6 #1e3a8a, purple #c4b5fd #a855f7 #6b21a8.
 - Original character only: never a likeness of a real person, and the name mustn't be a real player's nickname.
 - It must read clearly at 64 pixels wide (its size on a player card), so keep shapes bold and simple.`;
-function aiPrompt(desc){const n=N,head=P.type==='head',base=$('aiBase').checked&&grid.flat().some(Boolean);
+const LOGO_RULES=`Rules (Habit League team logos):
+- Exactly 16 rows of exactly 16 characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.
+- A bold, simple emblem that fills most of the 16×16 square and reads clearly at small sizes, like a sports team badge or mascot icon.
+- Flat colours, no gradients or anti-aliasing, about 3 to 6 colours with strong contrast. Don't draw an outline or shading: the app smooths the edges and adds light and shade itself.
+- An original design: never a real team's or brand's logo.`;
+function aiPrompt(desc){const n=N,head=P.type==='head',logo=P.type==='logo',base=$('aiBase').checked&&grid.flat().some(Boolean);
   let cur='';if(base){try{const d=encode();cur=JSON.stringify({pal:d.pal,px:d.px})}catch(_){}}
   const shape=head?`{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[32 strings of 32 characters]}`
+    :logo?`{"type":"logo","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[16 strings of 16 characters]}`
     :`{"type":"sprite","id":"lowercaseletters","name":"Short Name","outline":${useOutline()},"pal":{"a":"#rrggbb"},"px":[${n} strings of ${n} characters]}`;
-  return [head?`Draw a pixel-art player head for my game Habit League: ${desc}.`:`Draw ${n}×${n} pixel art for me: ${desc}.`,
+  return [head?`Draw a pixel-art player head for my game Habit League: ${desc}.`:logo?`Draw a 16×16 pixel-art team logo for my game Habit League: ${desc}.`:`Draw ${n}×${n} pixel art for me: ${desc}.`,
     base?`\nStart from this existing drawing and change it, keeping what already works (proportions, lighting, feature positions):\n${cur}`:'',
-    head?`\n${HEAD_RULES}`:`\nRules:\n- Exactly ${n} rows of exactly ${n} characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.\n- Flat colours, no anti-aliasing or gradients, few colours, bold shapes that read at small size. Light from the top left.${useOutline()?'\n- Don\'t draw an outline: a 1-pixel dark outline is added automatically.':''}`,
+    head?`\n${HEAD_RULES}`:logo?`\n${LOGO_RULES}`:`\nRules:\n- Exactly ${n} rows of exactly ${n} characters. "." is empty. Every other character is a key into "pal" (#rrggbb). Count every row.\n- Flat colours, no anti-aliasing or gradients, few colours, bold shapes that read at small size. Light from the top left.${useOutline()?'\n- Don\'t draw an outline: a 1-pixel dark outline is added automatically.':''}`,
     `\nReply with only the finished design as one line of JSON in a code block, in exactly this shape:\n${shape}\nThe name is at most 20 characters. The id is 2 to 20 lowercase letters or numbers.`].join('\n')}
 $('aiCopy').onclick=async()=>{const desc=$('aiDesc').value.trim();if(!desc){toast('Describe what you want first');$('aiDesc').focus();return}
   const t=aiPrompt(desc);try{await navigator.clipboard.writeText(t);toast('Prompt copied: paste it into Claude')}catch(_){$('code').value=t;$('code').focus();$('code').select();toast('Prompt is in the Code box: copy it from there')}};
@@ -478,6 +527,8 @@ $('aiPaste').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText
 // Loads pasted code, forgiving the usual AI slips: text around the code, miscounted rows, letters missing from the palette.
 function loadText(t,fromAi){let d;try{const a=t.indexOf('{'),b=t.lastIndexOf('}'),s=t.indexOf('[');
     const raw=s>=0&&s<a&&t.lastIndexOf(']')>b?t.slice(s,t.lastIndexOf(']')+1):t.slice(a,b+1);d=JSON.parse(raw);if(Array.isArray(d))d=d[0]}catch(_){return toast("That isn't Pixel Studio code")}
+  if(d&&d.type&&P.kinds&&d.type!==P.type)return toast(`That's a ${TYPE_NAMES[d.type]||d.type}: open its tab first`);
+  if(P.mode==='form'){try{openD(d)}catch(_){return toast(`That isn't a ${TYPE_NAMES[P.type]}`)}if(fromAi||!/^[a-z0-9]{2,20}$/.test(String(d.id||''))){curId=null;curName=''}return toast('Loaded: now make it your own')}
   if(!d||!Array.isArray(d.px)||!d.px.length||typeof d.pal!=='object'||!d.pal)return toast("That isn't Pixel Studio code");
   const pal={};for(const [k,v] of Object.entries(d.pal))if(k.length===1&&k!=='.'&&/^#[0-9a-fA-F]{6}$/.test(v))pal[k]=v.toLowerCase();
   const rows=d.px.map(r=>String(r)),want=Math.max(rows.length,...rows.map(r=>r.length));
@@ -493,7 +544,7 @@ $('png').onclick=()=>{const k=Math.max(8,Math.round(512/N)),c=document.createEle
 
 // ---- submit to the project's repo (a GitHub issue picked up by its art intake action) ----
 async function submit(draft){if(!P.repo||!ready2())return;const d=encode(),code=JSON.stringify(d);if(!nameOk(d)||!clashOk(d))return;
-  if(!draft&&LIB&&LIB.includes(d.id)&&!confirm(`This replaces "${d.name}", which is already in the app, with this version. Go ahead?\n\nCancel and change the name to add it as a new head instead.`))return;
+  if(!draft&&libHas(d.id)&&!confirm(`This replaces "${d.name}", which is already in the app, with this version. Go ahead?\n\nCancel and change the name to add it as a new ${TYPE_NAMES[P.type]||'item'} instead.`))return;
   curId=d.id;curName=d.name;
   const title=`${draft?'Art draft':'Art'}: ${d.name}`,lead=draft?'Save this design as a draft in the repo (not added to the app).':'Add this design to the app.';
   const mk=b=>`https://github.com/${P.repo}/issues/new?labels=${draft?'art-draft':'art'}&title=${encodeURIComponent(title)}&body=${encodeURIComponent(b)}`;
@@ -504,9 +555,72 @@ async function submit(draft){if(!P.repo||!ready2())return;const d=encode(),code=
 $('submit').onclick=()=>submit(false);$('submitDraft').onclick=()=>submit(true);
 
 async function repoDrafts(){if(!P.drafts)return;try{const r=await fetch(P.drafts,{cache:'no-cache'});DRAFTS=r.ok?await r.json():[];
-  DRAFTS=(Array.isArray(DRAFTS)?DRAFTS:[]).filter(d=>{try{decode(d);return true}catch(_){return false}});
-  $('repoDrafts').innerHTML=DRAFTS.length?DRAFTS.map((d,i)=>`<div class="it"><div class="av">${svgOf(decode(d))}</div><b>${esc(d.name)}<small>${esc(meta(d))}</small></b><button class="tb" data-rd="${i}">Open</button></div>`).join(''):'<p class="note" style="margin:0">No drafts in the repo yet.</p>';
+  DRAFTS=(Array.isArray(DRAFTS)?DRAFTS:[]).filter(d=>(d.type||'head')===P.type).filter(d=>{try{decode(d);return true}catch(_){return false}});
+  $('repoDrafts').innerHTML=DRAFTS.length?DRAFTS.map((d,i)=>`<div class="it">${P.mode==='form'?thumb(d):`<div class="av">${thumb(d)}</div>`}<b>${esc(d.name)}<small>${esc(meta(d))}</small></b><button class="tb" data-rd="${i}">Open</button></div>`).join(''):'<p class="note" style="margin:0">No drafts in the repo yet.</p>';
   document.querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>openD(DRAFTS[+b.dataset.rd]))}catch(_){$('repoDrafts').innerHTML='<p class="note" style="margin:0">Couldn\'t load the repo drafts.</p>'}}
+
+// ---- settings editors (kits, player backgrounds): start from an existing item and change its settings ----
+// Everything is previewed with the app's own drawing code, so the app's art style is kept exactly.
+const KIT_KEYS=['b','t','num','pat','ns','sw','font','fw'],HEX6=/^#[0-9a-fA-F]{6}$/;
+const fontName=f=>f?String(f).split(',')[0].replace(/['"]/g,''):'Standard';
+const HEXRE=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6})(?![0-9a-fA-F])/g;
+const pbgBase=id=>lists.pbg().find(b=>b.id===id);
+// A recoloured background: the base's colours swapped, keeping the alpha of #rrggbbaa colours.
+const pbgBg=f=>{const b=pbgBase(f.base);return b?b.bg.replace(HEXRE,m=>{const k=m.toLowerCase(),n=f.colors&&f.colors[k];return n?(k.length===9?n.toLowerCase()+k.slice(7):n.toLowerCase()):m}):''};
+const pbgCss=f=>{const b=pbgBase(f.base);return b?ART.pbgStyle(pbgBg(f),b.size||''):''};
+const sampleHeads=()=>['hothand','enforcer','oldtimer','king'].filter(id=>lists.head().some(h=>h.id===id)).concat(lists.head().map(h=>h.id)).slice(0,4);
+function defaultForm(){if(P.type==='kit'){const k=lists.kit()[0];return k?{...pickKit(k),from:k.id}:null}const b=lists.pbg()[0];return b?{base:b.id,colors:{}}:null}
+const pickKit=k=>{const o={};for(const key of KIT_KEYS)if(k[key]!==undefined&&k[key]!=='')o[key]=k[key];return o};
+function formReady(){if(!FORM){toast('This needs the Habit League update first');return false}
+  if(P.type==='pbg'&&!Object.keys(FORM.colors||{}).length){toast('Change at least one colour first');return false}return true}
+function encodeForm(){const name=$('fName').value.trim()||'Untitled',d={type:P.type,id:idFor(name),name,rarity:$('fRar').value,where:$('fWhere').value};
+  if(P.type==='kit')Object.assign(d,pickKit(FORM||{}));else{d.base=FORM.base;d.colors={...FORM.colors}}return d}
+function decodeForm(d){if(!d||typeof d!=='object')throw new Error('bad');
+  if(P.type==='kit'){if(![d.b,d.t,d.num].every(c=>HEX6.test(c||''))||!d.pat)throw new Error('bad');return pickKit(d)}
+  if(!d.base||!d.colors||typeof d.colors!=='object'||Object.entries(d.colors).some(([k,v])=>!/^#[0-9a-fA-F]{6,8}$/.test(k)||!HEX6.test(v)))throw new Error('bad');
+  return{base:String(d.base),colors:Object.fromEntries(Object.entries(d.colors).map(([k,v])=>[k.toLowerCase(),v.toLowerCase()]))}}
+function formThumb(f){if(P.type==='kit')return`<div class="av" style="background:var(--well)">${has('kitSvg')?ART.kitSvg(f,'',23):''}</div>`;
+  return`<div class="av" style="${has('pbgStyle')?esc(pbgCss(f)):''}"></div>`}
+function formPreview(){const big=$('pvBig'),row=$('pvRow');if(!FORM||!has(...(P.need||[]))){big.style.cssText='';big.innerHTML='';row.innerHTML='';return}
+  if(P.type==='kit'){big.style.cssText='background:var(--well)';big.innerHTML=ART.kitSvg(FORM,'Player',23);
+    row.innerHTML=`<div class="av sm" style="background:var(--well)">${ART.kitSvg(FORM,'',23)}</div>`+lists.kit().slice(0,3).map(k=>`<div class="av sm" style="background:var(--well)">${ART.kitSvg(k,'',23)}</div>`).join('');return}
+  const css=pbgCss(FORM),hs=sampleHeads();big.style.cssText=css;big.innerHTML=hs[0]?ART.svg(ART.headGrid(hs[0])):'';
+  row.innerHTML=hs.map(id=>`<div class="av sm" style="${esc(css)}">${ART.svg(ART.headGrid(id),P.cardScale)}</div>`).join('')}
+function renderForm(){const box=$('formBody');$('formTitle').textContent=P.type==='kit'?'Kit':'Player background';
+  if(!has(...(P.need||[]))){box.innerHTML=`<p class="note" style="margin:0">Making ${TYPE_NAMES[P.type]}s needs the latest Habit League: its drawing engine doesn't offer them yet. Once the update is live, reload this page.</p>`;return}
+  if(!FORM)FORM=defaultForm();if(!FORM){box.innerHTML='<p class="note">Nothing to start from yet.</p>';return}
+  if(P.type==='kit')return renderKit(box);renderPbg(box)}
+function renderKit(box){const K=lists.kit(),f=FORM,pats=ART.kitPatterns||[...new Set(K.map(k=>k.pat))],fonts=ART.kitFonts||[...new Set(K.map(k=>k.font).filter(Boolean))];
+  const col=(k,l)=>`<div><label>${l}</label><div class="fcol"><input type="color" data-k="${k}" value="${f[k]||'#ffffff'}"><span class="note">${f[k]||''}</span></div></div>`;
+  box.innerHTML=`<label>Start from</label><select id="fmBase">${K.map(k=>`<option value="${esc(k.id)}">${esc(k.n||k.id)}</option>`).join('')}</select>
+    <div class="two">${col('b','Shirt')}${col('t','Trim')}${col('num','Number')}
+      <div><label>Number outline</label><div class="fcol"><input type="checkbox" id="fmNs" ${f.ns?'checked':''} aria-label="Number outline on"><input type="color" data-k="ns" value="${f.ns||'#000000'}" ${f.ns?'':'disabled'}></div></div>
+      <div><label>Pattern</label><select data-k="pat">${pats.map(x=>`<option ${x===f.pat?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label>Number font</label><select data-k="font"><option value="">Standard</option>${fonts.filter(Boolean).map(x=>`<option value="${esc(x)}" ${x===f.font?'selected':''}>${esc(fontName(x))}</option>`).join('')}</select></div></div>
+    <p class="note" style="margin:8px 0 0"><b>Start from</b> copies an existing kit's settings. Change the colours, pattern and number style, and the preview shows it exactly as the app draws it.</p>`;
+  $('fmBase').value=K.some(k=>k.id===f.from)?f.from:K[0].id;
+  $('fmBase').onchange=e=>{const k=K.find(x=>x.id===e.target.value);FORM={...pickKit(k),from:k.id};renderForm();preview();wipLater()};
+  box.querySelectorAll('[data-k]').forEach(el=>el.oninput=()=>{const k=el.dataset.k,v=el.value;if(v)FORM[k]=v;else delete FORM[k];
+    if(k==='font'&&!v)delete FORM.fw;if(el.type==='color')el.nextElementSibling&&(el.nextElementSibling.textContent=v);preview();wipLater()});
+  $('fmNs').onchange=e=>{const c=box.querySelector('[data-k="ns"]');c.disabled=!e.target.checked;if(e.target.checked){FORM.ns=c.value;if(!FORM.sw)FORM.sw=3}else{delete FORM.ns;delete FORM.sw}preview();wipLater()}}
+function renderPbg(box){const B=lists.pbg(),f=FORM,base=pbgBase(f.base)||B[0];if(!pbgBase(f.base))f.base=base.id;
+  const slots=[...new Set((base.bg.match(HEXRE)||[]).map(h=>h.toLowerCase()))];
+  box.innerHTML=`<label>Start from</label><select id="fmBase">${B.map(b=>`<option value="${esc(b.id)}" ${b.id===f.base?'selected':''}>${esc(b.n||b.id)}</option>`).join('')}</select>
+    <label>Colours</label>${slots.length?`<div class="slots">${slots.map(h=>{const now=(f.colors[h]||h.slice(0,7));
+      return`<div class="slot ${f.colors[h]?'ch':''}"><span class="old" style="background:${h}" title="Original"></span><input type="color" data-h="${h}" value="${now}" aria-label="Colour ${h}"><span>${now}${h.length===9?' · see-through':''}</span></div>`}).join('')}</div>`
+      :'<p class="note" style="margin:0">This background has no colours to change: it uses the atmosphere\'s colours.</p>'}
+    <div class="row" style="margin-top:10px"><button class="btn" id="fmReset">Reset colours</button></div>
+    <p class="note" style="margin:8px 0 0">Each swatch is a colour in the starting background. Change any of them: the layout, texture and any animation stay exactly as they are. The small square shows the original.</p>`;
+  $('fmBase').onchange=e=>{FORM={base:e.target.value,colors:{}};renderForm();preview();wipLater()};
+  $('fmReset').onclick=()=>{FORM.colors={};renderForm();preview();wipLater()};
+  box.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{const h=el.dataset.h;if(el.value.toLowerCase()===h.slice(0,7))delete FORM.colors[h];else FORM.colors[h]=el.value.toLowerCase();
+    el.parentElement.classList.toggle('ch',!!FORM.colors[h]);el.nextElementSibling.textContent=el.value+(h.length===9?' · see-through':'');preview();wipLater()})}
+
+// ---- tabs (projects with several cosmetic types) ----
+function renderTabs(){const T=P.kinds&&TABS[P.kinds];$('tabs').hidden=!T;if(!T)return;
+  $('tabs').innerHTML=T.map(([g,ks])=>`<div class="tg"><span class="tgl">${g}</span>${ks.map(([k,n])=>{const soon=KINDS[k]&&KINDS[k].soon;
+    return`<button class="tab ${k===KIND?'on':''} ${soon?'soon':''}" data-kind="${k}">${n}${soon?'<small>later</small>':''}</button>`}).join('')}</div>`).join('');
+  document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{const k=b.dataset.kind,S=KINDS[k];if(!S||S.soon)return toast(`${b.textContent.replace('later','')} is coming in phase ${S?S.soon:2}`);if(k!==KIND)openKind(k)})}
 
 // ---- projects ----
 function migrate(){if(!P.legacyKey)return;const flag=KEY+'.migrated';try{if(localStorage.getItem(flag))return;
@@ -532,17 +646,26 @@ async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-leag
   $('loading').textContent=P.engine?`Loading ${P.name}'s drawing engine…`:'Loading…';
   ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
+  let k=null;if(P.kinds){try{k=localStorage.getItem(`${BASE_KEY}.${PID}.kind`)}catch(_){}if(!KINDS[k]||KINDS[k].soon)k=P.defaultKind}
+  openKind(k)}
+// Opens one tab (cosmetic type) of the current project: its settings, storage, editor and preview.
+function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]:{})};KEY=`${BASE_KEY}.${PID}`+(k&&k!=='head'?'.'+k:'');
+  if(k)try{localStorage.setItem(`${BASE_KEY}.${PID}.kind`,k)}catch(_){}
+  renderTabs();$('projNote').textContent=P.note||'';const pix=P.mode!=='form';
+  $('pixLeft').hidden=!pix;$('formLeft').hidden=pix;$('startCard').hidden=!pix;$('aiCard').hidden=!pix||P.ai===false;$('png').hidden=!pix;
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
-  $('kitCard').hidden=!(ART&&ART.parts&&ART.build);$('headStart').hidden=!ART;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
+  const starts=pix&&canGrid[P.type]&&canGrid[P.type]()?lists[P.type]():[];
+  $('kitCard').hidden=!(pix&&P.type==='head'&&ART&&ART.parts&&ART.build);$('headStart').hidden=!starts.length;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
   document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');document.documentElement.style.setProperty('--cardB',(P.cardBorder||1)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
-  $('fName').placeholder=P.type==='head'?'e.g. Sky Hook':'e.g. Club badge';
-  $('size').innerHTML=P.sizes.map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=P.sizes.length<2;
-  if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(ART.parts&&ART.build)setupKit()}
-  LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>x.id)}).catch(()=>{});
-  hist=[];fut=[];curId=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';
-  const back=wipRestore();if(back==='none')setGrid(ART&&ART.base?ART.base(2,'std'):empty(P.sizes.includes(32)?32:P.sizes[0]));
+  $('fName').placeholder={head:'e.g. Sky Hook',logo:'e.g. Thunder',kit:'e.g. Midnight Gold',pbg:'e.g. Toxic Flames'}[P.type]||'e.g. Club badge';
+  $('size').innerHTML=(P.sizes||[32]).map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=(P.sizes||[]).length<2;
+  $('baseHead').innerHTML=starts.map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(P.type==='head'&&ART&&ART.parts&&ART.build)setupKit();
+  LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>({type:x.type||'head',id:x.id}))}).catch(()=>{});
+  hist=[];fut=[];curId=null;curName='';FORM=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';$('pvBig').style.cssText='';
+  const sizes=P.sizes||[32],back=wipRestore();
+  if(back==='none'&&pix)setGrid(P.type==='head'&&ART&&ART.base?ART.base(2,'std'):empty(sizes.includes(32)?32:sizes[0]));if(!pix){setGrid(empty(16));renderForm()}
   $('size').value=N;zReset();$('swapBox').hidden=P.type!=='head';if(P.type==='head')setupSwap();
-  migrate();if(back==='drawing')toast('Picked up where you left off');$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
+  migrate();if(back==='drawing'&&pix)toast('Picked up where you left off');$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
 $('proj').innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
 $('proj').onchange=e=>openProject(e.target.value);
 let start='habit-league';try{start=new URLSearchParams(location.search).get('project')||localStorage.getItem(BASE_KEY+'.project')||start}catch(_){}
