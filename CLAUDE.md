@@ -6,7 +6,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
 
 - Everything is in `index.html`: plain HTML/CSS/JS, no build step and no dependencies. Keep it that way unless Kris asks otherwise.
 - `PROJECTS` at the top of the script lists the apps the studio makes art for:
-  - `habit-league` draws player heads with Habit League's own code.
+  - `habit-league` makes Habit League cosmetics (tabs: Team logo, kits, player backgrounds, heads; Arena and Effects to come) with the app's own code.
   - `sketchbook` is free drawing at 16 to 64 pixels, for football badges, kits and ideas.
 - **Tabs (kinds).** A project with `kinds` shows tabs from `TABS` (Habit League: Team / Arena / Effects, matching the app's Locker). Each tab's settings in `KINDS` are merged over the project's into `P`, and `openKind()` sets up its editor. `openProject()` only loads the engine.
   - `mode:'pixel'` tabs use the pixel editor: heads (32×32) and team logos (16×16).
@@ -32,7 +32,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
     - `pbgStyle(bg, size)` returns `background:…;background-size:…` with `var(--…)` resolved to the current atmosphere. It can contain double quotes, so set it with `el.style.cssText` or escape `"`. It's a still image (no Holo/Snowfall animation).
     - Swap rules: an 8-digit key matches only that colour; a 6-digit key matches 6- and 8-digit colours and keeps the alpha.
   - Intake extras: a pbg `base` must be a built-in background and every `colors` key must be in it; kit `sw` 0–8, `fw` whole 100–900; colours saved lowercase; the same id may be used in different types. Previews: heads `art/previews/<id>.png`, others `<type>-<id>.png`. `art/drafts.json` can hold any type, so check `type`.
-- **Ids** are 2 to 20 lowercase letters or numbers. An opened design keeps its id only while its name is unchanged, so renaming makes a new design. Names that belong to the app's built-in heads (in `HL_ART.heads()` but not in `art/library.json`) are blocked, because the intake rejects them.
+- **Ids** are 2 to 20 lowercase letters or numbers, unique within their type (a logo and a kit may share one). An opened design keeps its id only while its name is unchanged, so renaming makes a new design. Names that belong to a built-in item of the same type (in the engine's list, e.g. `HL_ART.kits()`, but not in `art/library.json`, plus `HIDDEN_IDS` such as the `scout` kit) are blocked, because the intake rejects them.
   - The API is defined in the Habit League repo (`Krismcnulty/habit-league`, `index.html`, search `HL_ART`). Change both sides together.
   - Without an engine, `basicSvg()` renders the preview.
 - **Designs** are JSON shaped like `{type, id, name, pal:{letter:hex}, px:[rows]}`.
@@ -45,8 +45,9 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
     - So for a see-through (8-digit) colour the studio saves the new colour with the original alpha appended (`'#0a0c1e80':'#22c55e80'`), or the app would make it solid. `pbgBg()` mirrors the app exactly; keep the two in step.
   - Kit fonts are any of `HL_ART.kitFonts`; `engineFonts()` copies the engine's @font-face rules into the page so they preview. The id `scout` is reserved for kits.
   - `art/drafts.json` and `art/library.json` hold every type, so lists filter by `type` (missing = head).
-- **Storage** is localStorage `pixelStudio.v1.<project>`, with folders in `pixelStudio.v1.<project>.folders`.
-  - The drawing in progress autosaves to `pixelStudio.v1.<project>.wip` (from `draw()`, debounced, and on pagehide). `openProject` flushes the old project's save before switching.
+- **Storage** is localStorage `pixelStudio.v1.<project>` (plus `.<kind>` for tabs other than heads), with folders in `<key>.folders`.
+  - The design in progress autosaves to `<key>.wip` (from `draw()` or a form change, debounced, and on pagehide). Pixel tabs save the grid; form tabs save `FORM`. `openProject` and `openKind` flush the old save before switching.
+  - The last tab used is kept in `pixelStudio.v1.<project>.kind`.
   - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.
 - **Submit to app / Save draft to repo** open a prefilled GitHub issue on the project's repo, labelled `art` or `art-draft`.
   - That repo's action (`.github/workflows/art.yml` plus `tools/art-intake.js`, both in the Habit League repo) validates the design, commits it to `art/library.json` or `art/drafts.json`, replies with a preview and closes the issue.
@@ -59,7 +60,7 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
 ## Related
 
 - The original HL Studio (`/habit-league/studio.html` in the Habit League repo) stays as it is for now. Kris plans to switch to this one eventually.
-- The art style rules are in the claude.ai project doc "Pixel Art Guide": 32×32, lit from the top left, five skin tones, three hair tones, no shoulders, original characters only.
+- The art style rules are in the claude.ai project doc "Pixel Art Guide": heads (32×32, lit from the top left, five skin tones, three hair tones, no shoulders, original characters only), team logos (16×16, flat colours, no outline or shading), kits and player backgrounds. Keep the AI prompt rules (`HEAD_RULES`, `LOGO_RULES`) in step with it.
 - A football version of Habit League is planned. When it exists, it gets its own repo and a new `PROJECTS` entry here (see README).
 
 ## Working rules
