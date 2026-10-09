@@ -24,10 +24,14 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - Heads add `rarity` (`rare`/`epic`/`leg`) and `where` (`shop`/`none`), and must be 32×32 with no drawn outline (the app adds it).
   - Sketchbook designs are `type:'sprite'` with an `outline` boolean.
 - **Storage** is localStorage `pixelStudio.v1.<project>`, with folders in `pixelStudio.v1.<project>.folders`.
+  - The drawing in progress autosaves to `pixelStudio.v1.<project>.wip` (from `draw()`, debounced, and on pagehide). `openProject` flushes the old project's save before switching.
   - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.
 - **Submit to app / Save draft to repo** open a prefilled GitHub issue on the project's repo, labelled `art` or `art-draft`.
   - That repo's action (`.github/workflows/art.yml` plus `tools/art-intake.js`, both in the Habit League repo) validates the design, commits it to `art/library.json` or `art/drafts.json`, replies with a preview and closes the issue.
   - Any change to the design format must stay compatible with `art-intake.js`.
+
+- **Canvas input.** Zoom is a CSS transform on `#cv` inside `#cvWrap`; `cell()` uses the transformed rect, so drawing maths needs no zoom handling. A second finger cancels the stroke in progress and starts a pinch. Fill, pick and replace act on pointer release, so a pinch never triggers them.
+- **Skin/hair swap** matches the drawing against "families" of aligned colour ramps: the guide's palette tables, plus ramps worked out from heads the engine draws (`ART.base` per skin, `ART.build` per hair colour).
 
 ## Related
 

@@ -30,8 +30,12 @@ header a{color:var(--muted);font-size:13px}
 .tb.on{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 18%,var(--well))}
 .tb:disabled{opacity:.4}
 .tb kbd{font:10px ui-monospace,monospace;color:var(--muted);margin-left:4px}
-#cv{width:100%;max-width:560px;aspect-ratio:1;display:block;margin:0 auto;touch-action:none;border-radius:10px;background:#0f1424;cursor:crosshair}
-@media (min-width:1100px){#cv{max-width:720px}}
+#cvWrap{position:relative;width:100%;max-width:560px;aspect-ratio:1;margin:0 auto;overflow:hidden;border-radius:10px;background:#0f1424;touch-action:none}
+@media (min-width:1100px){#cvWrap{max-width:720px}}
+#cv{position:absolute;left:0;top:0;width:100%;height:100%;display:block;transform-origin:0 0;touch-action:none;cursor:crosshair;image-rendering:pixelated}
+#cvWrap.pan #cv{cursor:grab}
+.zoomb{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:2}
+.zoomb .tb{padding:5px 10px;background:color-mix(in srgb,var(--well) 85%,transparent);backdrop-filter:blur(4px)}
 .pal{display:flex;flex-wrap:wrap;gap:5px}
 .sw{width:28px;height:28px;border-radius:7px;border:2px solid rgba(255,255,255,.12);padding:0}
 .sw.on{border-color:#fff;box-shadow:0 0 0 2px var(--orange)}
@@ -81,17 +85,20 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
     <div>
       <div class="card">
         <div class="tools">
-          <button class="tb on" data-tool="pen">✏️ Pen<kbd>B</kbd></button><button class="tb" data-tool="erase">🧽 Erase<kbd>E</kbd></button><button class="tb" data-tool="fill">🪣 Fill<kbd>G</kbd></button><button class="tb" data-tool="pick">💧 Pick<kbd>I</kbd></button>
+          <button class="tb on" data-tool="pen">✏️ Pen<kbd>B</kbd></button><button class="tb" data-tool="erase">🧽 Erase<kbd>E</kbd></button><button class="tb" data-tool="fill">🪣 Fill<kbd>G</kbd></button><button class="tb" data-tool="pick">💧 Pick<kbd>I</kbd></button><button class="tb" data-tool="swap" title="Tap a colour on the drawing to change it everywhere to the selected colour">🔁 Replace<kbd>R</kbd></button>
           <button class="tb" id="mirror">↔ Mirror<kbd>M</kbd></button><button class="tb" id="gridT">Grid</button>
           <button class="tb" id="undo">↶ Undo<kbd>Ctrl Z</kbd></button><button class="tb" id="redo">↷ Redo<kbd>Ctrl Y</kbd></button>
         </div>
-        <canvas id="cv" width="768" height="768"></canvas>
+        <div id="cvWrap"><canvas id="cv" width="768" height="768"></canvas><div class="zoomb"><button class="tb" id="zOut" aria-label="Zoom out">−</button><button class="tb" id="zFit" title="Fit the whole drawing">Fit</button><button class="tb" id="zIn" aria-label="Zoom in">+</button></div></div>
         <p class="note" id="cvNote" style="margin:8px 2px 0"></p>
       </div>
       <div class="card">
         <h2>Colours</h2>
         <div id="pals"></div>
         <div class="cur"><span class="sw on" id="curSw"></span><span id="curHex"></span><input type="color" id="custom" style="width:46px;height:36px;padding:2px"><span>Custom</span></div>
+        <div id="swapBox"><div class="row" style="margin-top:12px"><label style="margin:0;min-width:74px">Swap skin</label><select id="swSkin" style="flex:1;width:auto"></select><button class="btn" id="swSkinGo">Swap</button></div>
+          <div class="row" style="margin-top:6px"><label style="margin:0;min-width:74px">Swap hair</label><select id="swHair" style="flex:1;width:auto"></select><button class="btn" id="swHairGo">Swap</button></div>
+          <p class="note" style="margin:6px 0 0">Changes every skin or hair tone at once and keeps the shading. <b>Tint</b> uses the selected colour, e.g. pick a green and tint the skin for a zombie. <b>🔁 Replace</b> (top) changes any single colour everywhere.</p></div>
       </div>
     </div>
     <div>
@@ -229,7 +236,7 @@ function draw(){const W=cv.width,s=W/N,R=v=>Math.round(v);cx.clearRect(0,0,W,W);
   for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){cx.fillStyle=grid[y][x];cx.fillRect(R(x*s),R(y*s),R((x+1)*s)-R(x*s),R((y+1)*s)-R(y*s))}
   if(showGrid&&N<=64){cx.strokeStyle='rgba(255,255,255,.07)';cx.lineWidth=1;for(let i=1;i<N;i++){const p=R(i*s)+.5;cx.beginPath();cx.moveTo(p,0);cx.lineTo(p,W);cx.stroke();cx.beginPath();cx.moveTo(0,p);cx.lineTo(W,p);cx.stroke()}
     cx.strokeStyle='rgba(255,122,26,.25)';cx.beginPath();cx.moveTo(W/2,0);cx.lineTo(W/2,W);cx.stroke()}
-  preview()}
+  preview();wipLater()}
 function preview(){const svg=svgOf(grid);$('pvBig').innerHTML=svg;
   const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)):[];
   $('pvRow').innerHTML=`<div class="av sm">${svg}</div>`+others.map(id=>`<div class="av sm">${ART.svg(ART.headGrid(id))}</div>`).join('')}
@@ -239,24 +246,69 @@ function setPx(x,y,c){if(x<0||y<0||x>=N||y>=N)return;grid[y][x]=c;if(mirror)grid
 function fill(x,y,c){const t=grid[y][x];if(t===c)return;const q=[[x,y]];while(q.length){const [a,b]=q.pop();if(a<0||b<0||a>=N||b>=N||grid[b][a]!==t)continue;grid[b][a]=c;q.push([a+1,b],[a-1,b],[a,b+1],[a,b-1])}}
 function cell(e){const r=cv.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*N),Math.floor((e.clientY-r.top)/r.height*N)]}
 let down=false,last=null,erasing=false;
+// ---- zoom and pan: pinch / two fingers on a phone, wheel or the buttons on a computer, Space+drag or middle-drag to pan ----
+const wrap=$('cvWrap'),Z={s:1,x:0,y:0},pts=new Map();let gest=null,gestUsed=false,space=false,panDrag=null,tap=null;
+function zApply(){const W=wrap.clientWidth;Z.s=Math.min(12,Math.max(1,Z.s));Z.x=Math.min(0,Math.max(W-W*Z.s,Z.x));Z.y=Math.min(0,Math.max(W-W*Z.s,Z.y));
+  cv.style.transform=Z.s===1?'':`translate(${Z.x}px,${Z.y}px) scale(${Z.s})`;$('zFit').textContent=Z.s===1?'Fit':Math.round(Z.s*100)+'%'}
+function zoomAt(px,py,ns){ns=Math.min(12,Math.max(1,ns));const k=ns/Z.s;Z.x=px-(px-Z.x)*k;Z.y=py-(py-Z.y)*k;Z.s=ns;zApply()}
+function zReset(){Z.s=1;Z.x=Z.y=0;zApply()}
+const local=e=>{const r=wrap.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+$('zIn').onclick=()=>{const W=wrap.clientWidth;zoomAt(W/2,W/2,Z.s*1.5)};$('zOut').onclick=()=>{const W=wrap.clientWidth;zoomAt(W/2,W/2,Z.s/1.5)};$('zFit').onclick=zReset;
+wrap.addEventListener('wheel',e=>{e.preventDefault();const [px,py]=local(e);zoomAt(px,py,Z.s*Math.pow(1.0018,-e.deltaY))},{passive:false});
+addEventListener('resize',zApply);
+// A tap with fill, pick or replace acts on release, so starting a pinch never fills or recolours by accident.
+function doTap({x,y}){if(!grid[y]||x<0||x>=N)return;const t=grid[y][x];
+  if(tool==='pick'){if(t){setColor(t);tool='pen';tools()}return}
+  if(tool==='fill'){push();fill(x,y,color);draw();palettes();return}
+  if(tool==='swap'){if(!t)return toast('Tap a coloured pixel to change that colour everywhere');if(t===color)return toast('Pick the new colour first, then tap the colour to replace');
+    push();let n=0;for(const r of grid)for(let i=0;i<r.length;i++)if(r[i]===t){r[i]=color;n++}draw();palettes();toast(`Replaced ${n} pixel${n>1?'s':''}`)}}
+function cancelStroke(){if(!down)return;if(hist.length)setGrid(hist.pop());btns();down=false;last=null;draw()}
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);const [x,y]=cell(e);erasing=e.button===2||tool==='erase';
-  if(tool==='pick'&&!erasing){if(grid[y]&&grid[y][x]){setColor(grid[y][x]);tool='pen';tools()}return}
-  push();if(tool==='fill'&&!erasing){fill(x,y,color);draw();palettes();return}down=true;last=[x,y];setPx(x,y,erasing?null:color);draw()});
-cv.addEventListener('pointermove',e=>{if(!down)return;const [x,y]=cell(e);if(last&&x===last[0]&&y===last[1])return;
+cv.addEventListener('pointerdown',e=>{e.preventDefault();pts.set(e.pointerId,local(e));
+  if(pts.size===2){cancelStroke();tap=null;const [a,b]=[...pts.values()];gest={d:Math.hypot(a[0]-b[0],a[1]-b[1])||1,m:[(a[0]+b[0])/2,(a[1]+b[1])/2],s:Z.s,x:Z.x,y:Z.y};gestUsed=true;return}
+  if(pts.size>2||gest)return;
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  if(space||e.button===1){panDrag={p:local(e),x:Z.x,y:Z.y};return}
+  const [x,y]=cell(e);erasing=e.button===2||tool==='erase';
+  if(!erasing&&(tool==='pick'||tool==='fill'||tool==='swap')){tap={x,y};return}
+  push();down=true;last=[x,y];setPx(x,y,erasing?null:color);draw()});
+cv.addEventListener('pointermove',e=>{if(pts.has(e.pointerId))pts.set(e.pointerId,local(e));
+  if(gest&&pts.size>=2){const [a,b]=[...pts.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1])||1,m=[(a[0]+b[0])/2,(a[1]+b[1])/2],ns=Math.min(12,Math.max(1,gest.s*d/gest.d));
+    const ux=(gest.m[0]-gest.x)/gest.s,uy=(gest.m[1]-gest.y)/gest.s;Z.s=ns;Z.x=m[0]-ux*ns;Z.y=m[1]-uy*ns;zApply();return}
+  if(panDrag){const p=local(e);Z.x=panDrag.x+p[0]-panDrag.p[0];Z.y=panDrag.y+p[1]-panDrag.p[1];zApply();return}
+  if(!down)return;const [x,y]=cell(e);if(last&&x===last[0]&&y===last[1])return;
   const [x0,y0]=last,n=Math.max(Math.abs(x-x0),Math.abs(y-y0));for(let i=1;i<=n;i++)setPx(Math.round(x0+(x-x0)*i/n),Math.round(y0+(y-y0)*i/n),erasing?null:color);last=[x,y];draw()});
-addEventListener('pointerup',()=>{if(down)palettes();down=false;last=null});
+function pointerEnd(e){pts.delete(e.pointerId);if(tap&&!gestUsed)doTap(tap);tap=null;panDrag=null;
+  if(down)palettes();down=false;last=null;if(!pts.size){gest=null;gestUsed=false}}
+addEventListener('pointerup',pointerEnd);addEventListener('pointercancel',pointerEnd);
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;tools()});
 function tools(){document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===tool));$('mirror').classList.toggle('on',mirror);$('gridT').classList.toggle('on',showGrid)}
 $('mirror').onclick=()=>{mirror=!mirror;tools()};$('gridT').onclick=()=>{showGrid=!showGrid;tools();draw()};
 $('undo').onclick=()=>{if(!hist.length)return;fut.push(clone(grid));setGrid(hist.pop());btns();draw();palettes()};
 $('redo').onclick=()=>{if(!fut.length)return;hist.push(clone(grid));setGrid(fut.pop());btns();draw();palettes()};
 $('outline').onchange=()=>draw();
+addEventListener('keyup',e=>{if(e.key===' '){space=false;wrap.classList.remove('pan')}});
 addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();space=true;wrap.classList.add('pan');return}
+  if(k==='0'&&!e.ctrlKey&&!e.metaKey){zReset();return}
   if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();(e.shiftKey?$('redo'):$('undo')).onclick();return}
   if((e.ctrlKey||e.metaKey)&&k==='y'){e.preventDefault();$('redo').onclick();return}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
-  const T={b:'pen',p:'pen',e:'erase',g:'fill',f:'fill',i:'pick'};if(T[k]){tool=T[k];tools()}else if(k==='m'){mirror=!mirror;tools()}});
+  const T={b:'pen',p:'pen',e:'erase',g:'fill',f:'fill',i:'pick',r:'swap'};if(T[k]){tool=T[k];tools()}else if(k==='m'){mirror=!mirror;tools()}});
+
+// ---- autosave: the drawing in progress and its details, per project, so a closed tab or a refresh loses nothing ----
+const WIP=()=>KEY+'.wip';let wipT=null;
+function wipSave(){clearTimeout(wipT);wipT=null;if(!P||!grid||!KEY)return;
+  try{localStorage.setItem(WIP(),JSON.stringify({g:grid,name:$('fName').value,id:curId,cn:curName,rar:$('fRar').value,where:$('fWhere').value,ol:$('outline').checked,f:curFolder,t:Date.now()}))}catch(_){}}
+function wipLater(){clearTimeout(wipT);wipT=setTimeout(wipSave,400)}
+function wipRestore(){let w=null;try{w=JSON.parse(localStorage.getItem(WIP()))}catch(_){}
+  if(!w||!Array.isArray(w.g)||!P.sizes.includes(w.g.length)||!w.g.every(r=>Array.isArray(r)&&r.length===w.g.length))return 'none';
+  setGrid(w.g.map(r=>r.map(c=>typeof c==='string'&&/^#[0-9a-fA-F]{6}$/.test(c)?c:null)));
+  $('fName').value=w.name||'';curId=w.id||null;curName=w.cn||'';curFolder=w.f||'Unsorted';
+  if(P.fields){$('fRar').value=w.rar||'epic';$('fWhere').value=w.where||'shop'}if(P.outline==='toggle')$('outline').checked=w.ol!==false;
+  return grid.flat().some(Boolean)?'drawing':'empty'}
+['fName','fRar','fWhere'].forEach(id=>$(id).addEventListener('input',wipLater));
+addEventListener('pagehide',wipSave);document.addEventListener('visibilitychange',()=>{if(document.hidden)wipSave()});
 
 // ---- colours ----
 function setColor(c){color=c;$('curSw').style.background=c;$('curHex').textContent=c;$('custom').value=c;document.querySelectorAll('.pal .sw').forEach(s=>s.classList.toggle('on',s.dataset.c===c))}
@@ -266,6 +318,37 @@ function palGroups(){const head=[['Skin (5 tones each: highlight → deep shadow
 function palettes(){const groups=palGroups(),used=[...new Set(grid.flat().filter(Boolean))];if(used.length)groups.unshift(['In this design',used]);
   $('pals').innerHTML=groups.map(([l,cs])=>`<div class="pal-l">${l}</div><div class="pal">${cs.map(c=>`<button class="sw" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('')}</div>`).join('');
   document.querySelectorAll('.pal .sw').forEach(b=>b.onclick=()=>setColor(b.dataset.c));setColor(color)}
+
+// ---- skin and hair swap: find which skin or hair set a head uses, then swap every tone for the matching tone of another set ----
+// A "family" is a list of aligned ramps: tone k of one ramp matches tone k of every other ramp in the family.
+// Families come from the guide's palette tables and, when the engine is loaded, from heads the app itself draws.
+const HAIR_NAMES=['Black','Dark brown','Brown','Ginger blonde','Blonde','Auburn','Grey','Blue-black'];
+const chunk=(a,n)=>Array.from({length:a.length/n},(_,i)=>a.slice(i*n,i*n+n));
+function aligned(sets){const T=new Map();// sets[i] = list of grids drawn with set i, in the same order for every set
+  for(let g=0;g<sets[0].length;g++){const n=sets[0][g].length;for(let y=0;y<n;y++)for(let x=0;x<n;x++){const t=sets.map(s=>s[g]&&s[g][y]&&s[g][y][x]);
+    if(t.some(c=>!c)||t.every(c=>c===t[0]))continue;T.set(t.join(),t)}}
+  const tup=[...T.values()];return sets.map((_,i)=>tup.map(t=>t[i]))}
+const FAM={};
+function families(kind){const key=kind+(ART?'1':'0');if(FAM[key])return FAM[key];const f=[];
+  try{if(ART&&ART.base&&kind==='skin')f.push(aligned(ART.skins.map((_,i)=>ART.shapes.map(sh=>ART.base(i,sh)))));
+    if(ART&&ART.build&&ART.parts&&kind==='hair'){const st=['short','afro','long','curly','flat','spiky'].filter(x=>ART.parts.styles.includes(x));
+      f.push(aligned(ART.hairs.map(h=>st.map(style=>ART.build({skin:2,shape:'std',style,hair:h,band:'none',mouth:'flat',fx:[]})))))}}catch(_){}
+  f.push(kind==='skin'?chunk(DEF_PAL.skin,5):chunk(DEF_PAL.hair,3));return FAM[key]=f}
+function setupSwap(){const ns=ART&&ART.skins?ART.skins.length:6;
+  $('swSkin').innerHTML='<option value="tint">Tint with selected colour</option>'+Array.from({length:ns},(_,i)=>`<option value="${i}">Skin ${i+1}</option>`).join('');
+  $('swHair').innerHTML='<option value="tint">Tint with selected colour</option>'+HAIR_NAMES.map((h,i)=>`<option value="${i}">${h}</option>`).join('');$('swSkin').value='tint';$('swHair').value='tint'}
+const hsl=h=>{let [r,g,b]=rgb(h).map(v=>v/255);const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;if(mx===mn)return[0,0,l];const d=mx-mn,s=l>.5?d/(2-mx-mn):d/(mx+mn);
+  const hh=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;return[hh/6,s,l]};
+const fromHsl=([h,s,l])=>{const f=n=>{const k=(n+h*12)%12,a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1))};return toHex([f(0),f(8),f(4)].map(v=>v*255))};
+function swap(kind,target){const cnt={};for(const c of grid.flat())if(c)cnt[c]=(cnt[c]||0)+1;let best=null;
+  for(const fam of families(kind))fam.forEach((ramp,i)=>{const sc=[...new Set(ramp)].reduce((a,c)=>a+(cnt[c]||0),0);if(!best||sc>best.sc)best={fam,i,sc}});
+  const what=kind==='skin'?'skin':'hair';if(!best||best.sc<6)return toast(`Couldn't find the ${what} colours in this drawing: use 🔁 Replace instead`);
+  const src=best.fam[best.i],map={};
+  if(target==='tint'){const [th,ts]=hsl(color);for(const c of src)if(!(c in map)){const [,ss,sl]=hsl(c);map[c]=fromHsl([th,Math.min(1,(ts+ss)/2),sl])}}
+  else{const tgt=best.fam[+target];if(!tgt)return toast('That set isn\'t available');if(+target===best.i)return toast(`It already uses that ${what}`);src.forEach((c,k)=>{if(!(c in map))map[c]=tgt[k]})}
+  push();let n=0;for(const r of grid)for(let i=0;i<r.length;i++)if(r[i]&&r[i] in map&&map[r[i]]!==r[i]){r[i]=map[r[i]];n++}
+  draw();palettes();toast(n?`Swapped the ${what}: ${n} pixels`:`Nothing to change`)}
+$('swSkinGo').onclick=()=>swap('skin',$('swSkin').value);$('swHairGo').onclick=()=>swap('hair',$('swHair').value);
 
 // ---- parts kit (only when the app engine has one) ----
 const NAMES={bald:'Bald',buzz:'Buzz cut',short:'Short',flat:'Flat top',curly:'Curly',coils:'Tight curls',spiky:'Spiky',mohawk:'Mohawk',afro:'Afro',topknot:'Top knot',long:'Long',horseshoe:'Balding (sides)',
@@ -288,7 +371,7 @@ $('kStamp').onclick=()=>{if(N!==32)return toast('Stamping needs a 32×32 grid');
   draw();palettes();toast(n?'Parts stamped on':'Pick a hairstyle, headband, mouth or extra to stamp')};
 
 // ---- start points ----
-function load(g){push();setGrid(clone(g));$('size').value=N;draw();palettes()}
+function load(g){push();setGrid(clone(g));$('size').value=N;zReset();draw();palettes()}
 $('startEmpty').onclick=()=>{load(empty(+$('size').value));curId=null};
 $('startHead').onclick=()=>{load(ART.headGrid($('baseHead').value));curId=null;toast('Loaded: edit away, then save it under a new name')};
 
@@ -442,7 +525,7 @@ async function loadEngine(src){let html;try{const r=await fetch(src,{cache:'no-c
   const tick=()=>{if(done)return;let w=null;try{w=f.contentWindow&&f.contentWindow.HL_ART}catch(_){}if(w&&w.svg){done=true;return res(w)}if(Date.now()-t0>15000){done=true;return res(null)}setTimeout(tick,150)};
   f.addEventListener('load',tick);setTimeout(tick,500)})}
 const engines={};
-async function openProject(id){PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID];KEY=`${BASE_KEY}.${PID}`;try{localStorage.setItem(BASE_KEY+'.project',PID)}catch(_){}
+async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID];KEY=`${BASE_KEY}.${PID}`;try{localStorage.setItem(BASE_KEY+'.project',PID)}catch(_){}
   $('proj').value=PID;$('projNote').textContent=P.note;$('ui').hidden=true;$('loading').hidden=false;$('banner').hidden=true;
   $('loading').textContent=P.engine?`Loading ${P.name}'s drawing engine…`:'Loading…';
   ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];
@@ -455,8 +538,9 @@ async function openProject(id){PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID
   if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(ART.parts&&ART.build)setupKit()}
   LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>x.id)}).catch(()=>{});
   hist=[];fut=[];curId=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';
-  setGrid(ART&&ART.base?ART.base(2,'std'):empty(P.sizes.includes(32)?32:P.sizes[0]));$('size').value=N;
-  migrate();$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
+  const back=wipRestore();if(back==='none')setGrid(ART&&ART.base?ART.base(2,'std'):empty(P.sizes.includes(32)?32:P.sizes[0]));
+  $('size').value=N;zReset();$('swapBox').hidden=P.type!=='head';if(P.type==='head')setupSwap();
+  migrate();if(back==='drawing')toast('Picked up where you left off');$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
 $('proj').innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
 $('proj').onchange=e=>openProject(e.target.value);
 let start='habit-league';try{start=new URLSearchParams(location.search).get('project')||localStorage.getItem(BASE_KEY+'.project')||start}catch(_){}

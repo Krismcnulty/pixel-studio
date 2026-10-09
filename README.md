@@ -17,7 +17,11 @@ The first time you open the Habit League project, any designs saved in the old H
 
 ## Features
 
-- Pen, erase, fill, colour picker, mirror, undo/redo. Shortcuts: B, E, G, I, M, Ctrl+Z, Ctrl+Y. Right-click erases.
+- Pen, erase, fill, colour picker, replace, mirror, undo/redo. Shortcuts: B, E, G, I, R, M, Ctrl+Z, Ctrl+Y. Right-click erases.
+- **Replace** (R): tap a colour on the drawing to change it everywhere to the selected colour.
+- **Zoom:** pinch and drag with two fingers on a phone; mouse wheel, the − / + buttons, Space+drag or middle-drag to pan on a computer. **Fit** (or 0) shows the whole drawing.
+- **Swap skin / Swap hair** (heads): changes every skin or hair tone at once, to another set or tinted with the selected colour, keeping the shading.
+- **Autosave:** the drawing in progress and its details are kept in the browser for each project, so a closed tab or a refresh loses nothing.
 - Auto outline: always on for Habit League heads, optional in the Sketchbook.
 - **Describe it (AI):** type what you want (e.g. "zombie") and press **Copy AI prompt**. It copies a prompt with the art rules and your current drawing. Paste it into Claude, copy the reply, then press **Paste result**. Pasting forgives the usual AI slips: text around the code, rows of the wrong length, and letters missing from the palette.
 - Start from an empty grid, an existing head, the parts kit, an image (cropped, shrunk, snapped to the palette), or pasted code.
