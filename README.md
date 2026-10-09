@@ -10,7 +10,7 @@ Pick a project from the menu at the top. Each project keeps its own designs and 
 |---|---|---|---|
 | Habit League | Tabs for each cosmetic, like the app's Locker: Team (logo, kits, player backgrounds, heads) now; Arena and Effects later | Habit League's own drawing code (`/habit-league/index.html`) | `Krismcnulty/habit-league` |
 | Sketchbook | Anything at 16, 24, 32, 48 or 64 pixels: football badges, kits, ideas | Built in | Nothing (save, PNG and files only) |
-| Head Lab | New player heads, always starting from the Afroman head: change one thing at a time, then **Use in Player Heads** to name and submit it | Habit League's | Nothing directly |
+| Head Lab | New player heads, always starting from the Afroman head: change one thing at a time, save changes as reusable **Parts** (a goatee, a hairstyle) to add to other heads, then **Use in Player Heads** to name and submit it | Habit League's | Nothing directly |
 | Testing area | Experiments at 32, 48 or 64 pixels. Upload an image to see it at all three sizes side by side, at Habit League's card (68px) and profile (134px) sizes | Built in | Nothing |
 
 For a project with an engine, the studio loads that app in a hidden frame and draws with its code (`window.HL_ART`). The preview matches the app exactly, and the parts kit and the existing heads, logos, kits and backgrounds to start from all come from the app. This only works because every app is on the same site (krismcnulty.github.io).

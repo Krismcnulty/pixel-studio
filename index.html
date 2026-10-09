@@ -142,6 +142,13 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
         <div class="row" style="margin-top:10px"><button class="btn primary" id="aiCopy">✨ Copy AI prompt</button><a class="btn" id="aiOpen" href="https://claude.ai/new" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text);display:inline-block">Open Claude ↗</a><button class="btn" id="aiPaste">📥 Paste result</button></div>
         <p class="note" style="margin:6px 0 0"><b>1.</b> Describe it and press <b>Copy AI prompt</b>. <b>2.</b> Paste the prompt into Claude and send it. <b>3.</b> Copy Claude's reply, come back and press <b>Paste result</b>. Starting from a drawing (an imported image, an existing head or a logo) gives much better results than starting from nothing.</p>
       </div>
+      <div class="card" id="partsCard" hidden>
+        <h2>Parts</h2>
+        <p class="note" style="margin:0 0 6px">Change something on Afroman (e.g. swap the moustache for a goatee), then save it as a part. Only the pixels you changed are saved, so you can add the part to any head here.</p>
+        <div class="row"><input id="ptName" placeholder="e.g. Goatee" maxlength="24" style="flex:1;min-width:120px"><select id="ptCat" style="width:auto"><option>Facial hair</option><option>Hair</option><option>Eyes</option><option>Mouth</option><option>Skin details</option><option>Headwear</option><option>Extras</option></select><button class="btn primary" id="ptSave">Save as part</button></div>
+        <div class="chips" id="ptCats" style="margin:10px 0 6px"></div>
+        <div class="list" id="ptList"></div>
+      </div>
       <div class="card" id="kitCard">
         <h2>Parts kit</h2>
         <div class="two">
@@ -426,7 +433,9 @@ function swap(kind,target){const cnt={};for(const c of grid.flat())if(c)cnt[c]=(
   for(const fam of families(kind))fam.forEach((ramp,i)=>{const sc=[...new Set(ramp)].reduce((a,c)=>a+(cnt[c]||0),0);if(!best||sc>best.sc)best={fam,i,sc}});
   const what=kind==='skin'?'skin':'hair';if(!best||best.sc<6)return toast(`Couldn't find the ${what} colours in this drawing: use 🔁 Replace instead`);
   const src=best.fam[best.i],map={};
-  if(target==='tint'){const [th,ts]=hsl(color);for(const c of src)if(!(c in map)){const [,ss,sl]=hsl(c);map[c]=fromHsl([th,Math.min(1,(ts+ss)/2),sl])}}
+  // A tint takes every tone of that kind in the drawing, from any of the game's sets (a head can mix tones from several, as Afroman does).
+  if(target==='tint'){const [th,ts]=hsl(color),all=new Set([...src,...Object.keys(cnt).filter(c=>(kind==='skin'?DEF_PAL.skin:DEF_PAL.hair).includes(c))]);
+    for(const c of all)if(!(c in map)){const [,ss,sl]=hsl(c);map[c]=fromHsl([th,Math.min(1,(ts+ss)/2),sl])}}
   else{const tgt=best.fam[+target];if(!tgt)return toast('That set isn\'t available');if(+target===best.i)return toast(`It already uses that ${what}`);src.forEach((c,k)=>{if(!(c in map))map[c]=tgt[k]})}
   push();let n=0;for(const r of grid)for(let i=0;i<r.length;i++)if(r[i]&&r[i] in map&&map[r[i]]!==r[i]){r[i]=map[r[i]];n++}
   draw();palettes();toast(n?`Swapped the ${what}: ${n} pixels`:`Nothing to change`)}
@@ -620,6 +629,29 @@ function labPrompt(desc){let cur='';try{const d=encode();cur=JSON.stringify({pal
     `\nColours: keep the existing colours wherever nothing changes. For new things, pick colours that suit them (for example greens for zombie skin, reds for a wound) and shade them the same way the head is shaded: lighter on the top left, darker on the right and underneath.`,
     `\nThe head (each string is one row; "." is empty, every other character is a key into "pal"):\n${cur}`,
     `\nReply with only the finished head as one line of JSON in a code block, in exactly this shape:\n{"type":"head","id":"lowercaseletters","name":"Short Name","rarity":"epic","where":"none","pal":{"a":"#rrggbb"},"px":[64 strings of 64 characters]}\nCount every row: exactly 64 rows of exactly 64 characters.`].join('\n')}
+// ---- Head Lab parts: the pixels you changed from Afroman, saved to add to any head built from him ----
+const PT_KEY=()=>BASE_KEY+'.headlab.parts';let ptCat='All';
+const parts=()=>{try{return JSON.parse(localStorage.getItem(PT_KEY()))||[]}catch(_){return[]}};
+const keepParts=l=>{try{localStorage.setItem(PT_KEY(),JSON.stringify(l))}catch(_){toast('Could not save in this browser')}};
+const SKINSET=new Set(DEF_PAL.skin);
+// How this head's skin differs from Afroman's: for each Afroman skin colour, the colour this head mostly has in those places.
+function skinMap(G){const B=labBase(),cnt={};for(let y=0;y<64;y++)for(let x=0;x<64;x++){const b=B[y][x],g=G[y]&&G[y][x];if(!b||!g||!SKINSET.has(b))continue;(cnt[b]=cnt[b]||{})[g]=(cnt[b][g]||0)+1}
+  const M={};for(const b in cnt){const [g,n]=Object.entries(cnt[b]).sort((p,q)=>q[1]-p[1])[0];const tot=Object.values(cnt[b]).reduce((a,v)=>a+v,0);if(g!==b&&n/tot>.5)M[b]=g}return M}
+function partOnto(G,pt){const M=skinMap(G),out=clone(G);for(const [x,y,c] of pt.px)out[y][x]=c===null?null:(M[c]||c);return out}
+function partsList(){const all=parts(),cats=['All',...new Set(all.map(p=>p.cat))];if(!cats.includes(ptCat))ptCat='All';
+  $('ptCats').innerHTML=all.length?cats.map(c=>`<button class="chip ${c===ptCat?'on':''}" data-pc="${esc(c)}">${esc(c)}</button>`).join(''):'';
+  document.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>{ptCat=b.dataset.pc;partsList()});
+  const shown=all.map((p,i)=>[p,i]).filter(([p])=>ptCat==='All'||p.cat===ptCat);
+  $('ptList').innerHTML=shown.length?shown.map(([p,i])=>`<div class="it"><div class="av">${svgOf(partOnto(labBase(),p))}</div><b>${esc(p.name)}<small>${esc(p.cat)} · ${p.px.length} pixels</small></b><button class="tb" data-pa="${i}">Add</button><button class="tb" data-pd="${i}" aria-label="Delete">✕</button></div>`).join('')
+    :'<p class="note" style="margin:0">No parts yet.</p>';
+  document.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>{const p=parts()[+b.dataset.pa];if(N!==64)return toast('Parts go on 64×64 heads');push();setGrid(partOnto(grid,p));draw();palettes();toast(`Added ${p.name}`)});
+  document.querySelectorAll('[data-pd]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this part?'))return;const l=parts();l.splice(+b.dataset.pd,1);keepParts(l);partsList()})}
+$('ptSave').onclick=()=>{const name=$('ptName').value.trim();if(!name){toast('Name the part first, e.g. Goatee');$('ptName').focus();return}
+  if(N!==64)return toast('Parts come from a 64×64 head');const B=labBase(),px=[];
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++)if(grid[y][x]!==B[y][x])px.push([x,y,grid[y][x]]);
+  if(!px.length)return toast('Nothing has changed from Afroman yet');
+  if(px.length>1200&&!confirm(`This part changes ${px.length} pixels, so it probably includes more than one change (a skin swap, say). Save it anyway?\n\nTip: press Reset to Afroman, make just this one change, then save.`))return;
+  const l=parts().filter(p=>p.name.toLowerCase()!==name.toLowerCase());l.push({name,cat:$('ptCat').value,px});keepParts(l);$('ptName').value='';ptCat='All';partsList();toast(`Saved the part "${name}"`)};
 $('labReset').onclick=()=>{load(labBase());curId=null;curName='';$('fName').value='';toast('Back to Afroman')};
 $('toHeads').onclick=()=>{if(!grid.flat().some(Boolean))return toast('Nothing to send yet');wipSave();
   try{localStorage.setItem(`${BASE_KEY}.habit-league.wip`,JSON.stringify({g:grid,name:$('fName').value,id:null,cn:'',rar:'epic',where:'shop',f:'Unsorted',t:Date.now()}));localStorage.setItem(`${BASE_KEY}.habit-league.kind`,'head')}catch(_){}
@@ -790,7 +822,7 @@ function openKind(k){if(wipT)wipSave();KIND=k;P={...PROJECTS[PID],...(k?KINDS[k]
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
   const starts=pix&&canGrid[P.type]&&canGrid[P.type]()?lists[P.type]():[];
   $('aiHeadOpts').hidden=P.type!=='head';if(P.type==='head')setupStyle();$('aiStyle').hidden=$('aiStyle').previousElementSibling.hidden=!!P.lab;
-  $('labReset').hidden=$('labRow').hidden=!P.lab;$('aiBase').parentElement.hidden=!!P.lab;
+  $('labReset').hidden=$('labRow').hidden=$('partsCard').hidden=!P.lab;if(P.lab)partsList();$('aiBase').parentElement.hidden=!!P.lab;
   $('cmpCard').hidden=!P.compare;if(!P.compare)lastImg=null;
   $('kitCard').hidden=true;/* the parts kit makes old-style 32×32 heads, so it's retired here (the app still uses it for scouted players) */$('headStart').hidden=!starts.length||!!P.lab;$('startLabel').textContent=`An existing ${TYPE_NAMES[P.type]||'design'}`;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
   document.documentElement.style.setProperty('--card',(P.cardPx||52)+'px');document.documentElement.style.setProperty('--cardB',(P.cardBorder||1)+'px');$('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
