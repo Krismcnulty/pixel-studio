@@ -40,7 +40,11 @@ Kris's standalone pixel art editor. Live at krismcnulty.github.io/pixel-studio (
   - Sketchbook designs are `type:'sprite'` with an `outline` boolean.
   - Logos: `type:'logo'`, 16×16, same encoding as heads.
   - Kits: `{type:'kit', id, name, rarity, where, b, t, num, pat, ns?, sw?, font?, fw?}`.
-  - Player backgrounds: `{type:'pbg', id, name, rarity, where, base, colors:{'#oldhex':'#newhex'}}`. Keys are the base's colours as written (6 or 8 digits, lowercase); an 8-digit colour keeps its alpha.
+  - Player backgrounds: `{type:'pbg', id, name, rarity, where, base, colors:{'#oldhex':'#newhex'}}`. `base` must be a built-in background. Keys are the base's colours as written, lowercase, with `%23…` (inside encoded images) written as `#…`.
+    - The app's rule: an 8-digit key changes only that exact colour, to exactly the value given; a 6-digit key changes the 6- and 8-digit forms and keeps the alpha.
+    - So for a see-through (8-digit) colour the studio saves the new colour with the original alpha appended (`'#0a0c1e80':'#22c55e80'`), or the app would make it solid. `pbgBg()` mirrors the app exactly; keep the two in step.
+  - Kit fonts are any of `HL_ART.kitFonts`; `engineFonts()` copies the engine's @font-face rules into the page so they preview. The id `scout` is reserved for kits.
+  - `art/drafts.json` and `art/library.json` hold every type, so lists filter by `type` (missing = head).
 - **Storage** is localStorage `pixelStudio.v1.<project>`, with folders in `pixelStudio.v1.<project>.folders`.
   - The drawing in progress autosaves to `pixelStudio.v1.<project>.wip` (from `draw()`, debounced, and on pagehide). `openProject` flushes the old project's save before switching.
   - The Habit League project copies designs over once from the old HL Studio key `hlStudio.v1`.

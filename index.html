@@ -440,7 +440,8 @@ const slug=s=>{const t=String(s).toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0
 const idFor=name=>curId&&name===curName&&/^[a-z0-9]{2,20}$/.test(curId)?curId:slug(name);
 // Ids taken by the app's built-in heads (the intake rejects them). Studio-made heads in the library can be replaced, so they don't count.
 const libHas=id=>!!LIB&&LIB.some(x=>(x.type||'head')===P.type&&x.id===id);
-const builtIn=id=>!!(ART&&lists[P.type]&&LIB&&lists[P.type]().some(h=>h.id===id)&&!libHas(id));
+const HIDDEN_IDS={kit:['scout']};// ids the app keeps for itself though they aren't cosmetics
+const builtIn=id=>(HIDDEN_IDS[P.type]||[]).includes(id)||!!(ART&&lists[P.type]&&LIB&&lists[P.type]().some(h=>h.id===id)&&!libHas(id));
 function encode(){if(P.mode==='form')return encodeForm();const cols=[...new Set(grid.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   if(cols.length>L.length)throw new Error('Too many colours (max 62)');const pal={};cols.forEach((c,i)=>pal[L[i]]=c);const inv=Object.fromEntries(Object.entries(pal).map(([k,v])=>[v,k]));
   const name=$('fName').value.trim()||'Untitled',d={type:P.type,id:idFor(name),name};
@@ -563,13 +564,16 @@ async function repoDrafts(){if(!P.drafts)return;try{const r=await fetch(P.drafts
 // Everything is previewed with the app's own drawing code, so the app's art style is kept exactly.
 const KIT_KEYS=['b','t','num','pat','ns','sw','font','fw'],HEX6=/^#[0-9a-fA-F]{6}$/;
 const fontName=f=>f?String(f).split(',')[0].replace(/['"]/g,''):'Standard';
-const HEXRE=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6})(?![0-9a-fA-F])/g;
-const pbgBase=id=>lists.pbg().find(b=>b.id===id);
+// Colours in a background are #rrggbb, #rrggbbaa, or the same written %23… inside an encoded image.
+const HEXRE=/(?:#|%23)(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6})(?![0-9a-fA-F])/g;const normHex=m=>'#'+m.replace(/^(#|%23)/,'').toLowerCase();
+const pbgBase=id=>lists.pbg().find(b=>b.id===id&&!b.base);// only built-in backgrounds can be a base
 // A recoloured background: the base's colours swapped, keeping the alpha of #rrggbbaa colours.
-const pbgBg=f=>{const b=pbgBase(f.base);return b?b.bg.replace(HEXRE,m=>{const k=m.toLowerCase(),n=f.colors&&f.colors[k];return n?(k.length===9?n.toLowerCase()+k.slice(7):n.toLowerCase()):m}):''};
+// Matches the app: an 8-digit key changes only that exact colour; a 6-digit key changes 6- and 8-digit forms and keeps the alpha.
+const pbgBg=f=>{const b=pbgBase(f.base),C=f.colors||{};return b?b.bg.replace(HEXRE,m=>{const pre=m.startsWith('%23')?'%23':'#',k=normHex(m),n=C[k]||(k.length===9&&C[k.slice(0,7)]);
+  return n?pre+n.toLowerCase().slice(1)+(k.length===9&&n.length===7?k.slice(7):''):m}):''};
 const pbgCss=f=>{const b=pbgBase(f.base);return b?ART.pbgStyle(pbgBg(f),b.size||''):''};
 const sampleHeads=()=>['hothand','enforcer','oldtimer','king'].filter(id=>lists.head().some(h=>h.id===id)).concat(lists.head().map(h=>h.id)).slice(0,4);
-function defaultForm(){if(P.type==='kit'){const k=lists.kit()[0];return k?{...pickKit(k),from:k.id}:null}const b=lists.pbg()[0];return b?{base:b.id,colors:{}}:null}
+function defaultForm(){if(P.type==='kit'){const k=lists.kit()[0];return k?{...pickKit(k),from:k.id}:null}const b=lists.pbg().find(x=>!x.base);return b?{base:b.id,colors:{}}:null}
 const pickKit=k=>{const o={};for(const key of KIT_KEYS)if(k[key]!==undefined&&k[key]!=='')o[key]=k[key];return o};
 function formReady(){if(!FORM){toast('This needs the Habit League update first');return false}
   if(P.type==='pbg'&&!Object.keys(FORM.colors||{}).length){toast('Change at least one colour first');return false}return true}
@@ -577,7 +581,7 @@ function encodeForm(){const name=$('fName').value.trim()||'Untitled',d={type:P.t
   if(P.type==='kit')Object.assign(d,pickKit(FORM||{}));else{d.base=FORM.base;d.colors={...FORM.colors}}return d}
 function decodeForm(d){if(!d||typeof d!=='object')throw new Error('bad');
   if(P.type==='kit'){if(![d.b,d.t,d.num].every(c=>HEX6.test(c||''))||!d.pat)throw new Error('bad');return pickKit(d)}
-  if(!d.base||!d.colors||typeof d.colors!=='object'||Object.entries(d.colors).some(([k,v])=>!/^#[0-9a-fA-F]{6,8}$/.test(k)||!HEX6.test(v)))throw new Error('bad');
+  if(!d.base||!d.colors||typeof d.colors!=='object'||Object.entries(d.colors).some(([k,v])=>!/^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(k)||!/^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v)))throw new Error('bad');
   return{base:String(d.base),colors:Object.fromEntries(Object.entries(d.colors).map(([k,v])=>[k.toLowerCase(),v.toLowerCase()]))}}
 function formThumb(f){if(P.type==='kit')return`<div class="av" style="background:var(--well)">${has('kitSvg')?ART.kitSvg(f,'',23):''}</div>`;
   return`<div class="av" style="${has('pbgStyle')?esc(pbgCss(f)):''}"></div>`}
@@ -603,17 +607,18 @@ function renderKit(box){const K=lists.kit(),f=FORM,pats=ART.kitPatterns||[...new
   box.querySelectorAll('[data-k]').forEach(el=>el.oninput=()=>{const k=el.dataset.k,v=el.value;if(v)FORM[k]=v;else delete FORM[k];
     if(k==='font'&&!v)delete FORM.fw;if(el.type==='color')el.nextElementSibling&&(el.nextElementSibling.textContent=v);preview();wipLater()});
   $('fmNs').onchange=e=>{const c=box.querySelector('[data-k="ns"]');c.disabled=!e.target.checked;if(e.target.checked){FORM.ns=c.value;if(!FORM.sw)FORM.sw=3}else{delete FORM.ns;delete FORM.sw}preview();wipLater()}}
-function renderPbg(box){const B=lists.pbg(),f=FORM,base=pbgBase(f.base)||B[0];if(!pbgBase(f.base))f.base=base.id;
-  const slots=[...new Set((base.bg.match(HEXRE)||[]).map(h=>h.toLowerCase()))];
+function renderPbg(box){const B=lists.pbg().filter(b=>!b.base),f=FORM,base=pbgBase(f.base)||B[0];if(!pbgBase(f.base))f.base=base.id;
+  const slots=[...new Set((base.bg.match(HEXRE)||[]).map(normHex))];
   box.innerHTML=`<label>Start from</label><select id="fmBase">${B.map(b=>`<option value="${esc(b.id)}" ${b.id===f.base?'selected':''}>${esc(b.n||b.id)}</option>`).join('')}</select>
     <label>Colours</label>${slots.length?`<div class="slots">${slots.map(h=>{const now=(f.colors[h]||h.slice(0,7));
-      return`<div class="slot ${f.colors[h]?'ch':''}"><span class="old" style="background:${h}" title="Original"></span><input type="color" data-h="${h}" value="${now}" aria-label="Colour ${h}"><span>${now}${h.length===9?' · see-through':''}</span></div>`}).join('')}</div>`
+      return`<div class="slot ${f.colors[h]?'ch':''}"><span class="old" style="background:${h}" title="Original"></span><input type="color" data-h="${h}" value="${now.slice(0,7)}" aria-label="Colour ${h}"><span>${now.slice(0,7)}${h.length===9?' · see-through':''}</span></div>`}).join('')}</div>`
       :'<p class="note" style="margin:0">This background has no colours to change: it uses the atmosphere\'s colours.</p>'}
     <div class="row" style="margin-top:10px"><button class="btn" id="fmReset">Reset colours</button></div>
     <p class="note" style="margin:8px 0 0">Each swatch is a colour in the starting background. Change any of them: the layout, texture and any animation stay exactly as they are. The small square shows the original.</p>`;
   $('fmBase').onchange=e=>{FORM={base:e.target.value,colors:{}};renderForm();preview();wipLater()};
   $('fmReset').onclick=()=>{FORM.colors={};renderForm();preview();wipLater()};
-  box.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{const h=el.dataset.h;if(el.value.toLowerCase()===h.slice(0,7))delete FORM.colors[h];else FORM.colors[h]=el.value.toLowerCase();
+  // A see-through colour keeps its transparency: the new colour is saved with the original alpha (#rrggbbaa), which the app swaps in exactly.
+  box.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{const h=el.dataset.h;if(el.value.toLowerCase()===h.slice(0,7))delete FORM.colors[h];else FORM.colors[h]=el.value.toLowerCase()+(h.length===9?h.slice(7):'');
     el.parentElement.classList.toggle('ch',!!FORM.colors[h]);el.nextElementSibling.textContent=el.value+(h.length===9?' · see-through':'');preview();wipLater()})}
 
 // ---- tabs (projects with several cosmetic types) ----
@@ -641,10 +646,15 @@ async function loadEngine(src){let html;try{const r=await fetch(src,{cache:'no-c
   const tick=()=>{if(done)return;let w=null;try{w=f.contentWindow&&f.contentWindow.HL_ART}catch(_){}if(w&&w.svg){done=true;return res(w)}if(Date.now()-t0>15000){done=true;return res(null)}setTimeout(tick,150)};
   f.addEventListener('load',tick);setTimeout(tick,500)})}
 const engines={};
+// Kits can use any font the app loads, so copy the engine's @font-face rules (with their font files' full addresses) into this page.
+function engineFonts(src){if(document.getElementById('engineFonts'))return;const f=document.querySelector('iframe[title="engine"]');if(!f)return;
+  const dir=new URL(src,location.href).href.replace(/[^/]*$/,'');let css='';
+  try{for(const sh of f.contentDocument.styleSheets){let rules=[];try{rules=[...sh.cssRules]}catch(_){}for(const r of rules)if(r.type===5)css+=r.cssText.replace(/url\((['"]?)(?!data:|https?:|\/)([^'")]+)\1\)/g,(m,q,u)=>`url("${dir}${u}")`)+'\n'}}catch(_){}
+  if(css){const st=document.createElement('style');st.id='engineFonts';st.textContent=css;document.head.appendChild(st)}}
 async function openProject(id){if(wipT)wipSave();PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID];KEY=`${BASE_KEY}.${PID}`;try{localStorage.setItem(BASE_KEY+'.project',PID)}catch(_){}
   $('proj').value=PID;$('projNote').textContent=P.note;$('ui').hidden=true;$('loading').hidden=false;$('banner').hidden=true;
   $('loading').textContent=P.engine?`Loading ${P.name}'s drawing engine…`:'Loading…';
-  ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];
+  ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];if(ART)engineFonts(P.engine);
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
   let k=null;if(P.kinds){try{k=localStorage.getItem(`${BASE_KEY}.${PID}.kind`)}catch(_){}if(!KINDS[k]||KINDS[k].soon)k=P.defaultKind}
   openKind(k)}
