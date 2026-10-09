@@ -169,7 +169,7 @@ iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;vi
 --------------------------------------------------------------------------- */
 const PROJECTS={
   'habit-league':{name:'Habit League',note:'Player heads',type:'head',sizes:[32],outline:'always',fields:true,
-    engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',legacyKey:'hlStudio.v1',
+    engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',library:'/habit-league/art/library.json',legacyKey:'hlStudio.v1',
     cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
     pvTitle:'Preview (as the app draws it)',pvNote:'Card size, next to existing heads'},
   'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
@@ -190,7 +190,7 @@ const DEF_PAL={
 };
 const OUTLINE='#140b06';
 
-let PID,P,KEY,ART=null,N=32,grid,tool='pen',mirror=false,showGrid=true,color='#d39a6a',hist=[],fut=[],curId=null,folder='All',curFolder='Unsorted',DRAFTS=[];
+let PID,P,KEY,ART=null,N=32,grid,tool='pen',mirror=false,showGrid=true,color='#d39a6a',hist=[],fut=[],curId=null,curName='',folder='All',curFolder='Unsorted',DRAFTS=[],LIB=null;
 const $=id=>document.getElementById(id);
 const empty=(n=N)=>Array.from({length:n},()=>Array(n).fill(null));
 const clone=g=>g.map(r=>r.slice());
@@ -211,7 +211,8 @@ function basicSvg(G,outline=useOutline()){const n=G.length,out=G.map(r=>r.slice(
   const side=Math.max(x1-x0,y1-y0)+3,ox=(x0+x1+1)/2-side/2,oy=(y0+y1+1)/2-side/2;let r='';
   for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(out[y][x])r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${out[y][x]}"/>`;
   return`<svg viewBox="${ox} ${oy} ${side} ${side}" shape-rendering="crispEdges">${r}</svg>`}
-const svgOf=G=>(ART&&P.type==='head'&&G.length===32)?ART.svg(G):basicSvg(G,P.outline==='always'||!!G.outline||useOutline());
+// A saved sprite carries its own outline setting; the drawing on the canvas follows the Auto outline box.
+const svgOf=G=>(ART&&P.type==='head'&&G.length===32)?ART.svg(G):basicSvg(G,P.outline==='always'||(typeof G.outline==='boolean'?G.outline:useOutline()));
 
 // ---- drawing ----
 const cv=$('cv'),cx=cv.getContext('2d');
@@ -303,14 +304,20 @@ function fromImage(img,n){
   return G}
 
 // ---- designs: encode, store, folders ----
-const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,16)||'art';
+// ids: 2 to 20 lowercase letters or numbers (what the art intake accepts)
+const slug=s=>{const t=String(s).toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,20);return t.length>=2?t:(t+'art').slice(0,20)};
+// An opened design keeps its id only while its name is unchanged: renaming it makes a new design and leaves the original alone.
+const idFor=name=>curId&&name===curName?curId:slug(name);
+// Ids taken by the app's built-in heads (the intake rejects them). Studio-made heads in the library can be replaced, so they don't count.
+const builtIn=id=>!!(ART&&P.type==='head'&&LIB&&ART.heads().some(h=>h.id===id)&&!LIB.includes(id));
 function encode(){const cols=[...new Set(grid.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   if(cols.length>L.length)throw new Error('Too many colours (max 62)');const pal={};cols.forEach((c,i)=>pal[L[i]]=c);const inv=Object.fromEntries(Object.entries(pal).map(([k,v])=>[v,k]));
-  const name=$('fName').value.trim()||'Untitled',d={type:P.type,id:curId||slug(name),name};
+  const name=$('fName').value.trim()||'Untitled',d={type:P.type,id:idFor(name),name};
   if(P.fields){d.rarity=$('fRar').value;d.where=$('fWhere').value}
   if(P.outline==='toggle')d.outline=$('outline').checked;
   d.pal=pal;d.px=grid.map(r=>r.map(c=>c?inv[c]:'.').join(''));return d}
-function decode(d){if(!d||!Array.isArray(d.px)||d.px.length<8||d.px.length>64||d.px.some(r=>r.length!==d.px.length))throw new Error('bad');
+function decode(d){if(!d||!Array.isArray(d.px)||d.px.length<8||d.px.length>64||d.px.some(r=>typeof r!=='string'||r.length!==d.px.length))throw new Error('bad');
+  if(!d.pal||typeof d.pal!=='object'||Object.values(d.pal).some(v=>!/^#[0-9a-fA-F]{6}$/.test(v)))throw new Error('bad');
   const g=d.px.map(r=>[...r].map(c=>c==='.'?null:(d.pal[c]||null)));g.outline=d.outline;return g}
 const strip=d=>{const o={...d};delete o.folder;delete o.saved;return o};
 const store=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(_){return[]}};
@@ -328,13 +335,17 @@ function list(){const all=store(),F=foldersOf();
   document.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{const l=store();l[+s.dataset.mv].folder=s.value;keep(l);list()});
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this design?'))return;const l=store();l.splice(+b.dataset.del,1);keep(l);list()})}
 function openD(d){const g=decode(d);if(P.type==='head'&&g.length!==32)return toast('Habit League heads must be 32×32');
-  load(g);curId=d.id;curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';
+  load(g);curId=d.id;curName=d.name||'';curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';
   if(P.fields){$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop'}
   if(P.outline==='toggle'){$('outline').checked=d.outline!==false;draw()}
   $('code').value=JSON.stringify(strip(d))}
 const ready2=()=>{if(!grid.flat().some(Boolean)){toast('Draw something first');return false}if(!$('fName').value.trim()){toast('Give it a name first');$('fName').focus();return false}return true};
 const target=()=>folder!=='All'?folder:curFolder;
-$('save').onclick=()=>{if(!ready2())return;const d=encode();curId=d.id;const l=store().filter(x=>x.id!==d.id);
+// Saving or submitting under an id that belongs to a different design asks first instead of replacing it.
+function clashOk(d){const x=store().find(y=>y.id===d.id);
+  return !x||d.id===curId||confirm(`"${x.name}" is already saved (in ${x.folder||'Unsorted'}) and this would replace it. Replace it?\n\nCancel and change the name to keep both.`)}
+function nameOk(d){if(!builtIn(d.id))return true;toast(`"${d.name}" is taken by one of the app's own heads: pick another name`);$('fName').focus();return false}
+$('save').onclick=()=>{if(!ready2())return;const d=encode();if(!nameOk(d)||!clashOk(d))return;curId=d.id;curName=d.name;const l=store().filter(x=>x.id!==d.id);
   l.unshift({...d,folder:target(),saved:Date.now()});keep(l);list();$('code').value=JSON.stringify(d);toast(`Saved to ${target()}`)};
 $('newFolder').onclick=()=>{const n=(prompt('Folder name (e.g. Not ready, Halloween ideas)')||'').trim().slice(0,24);if(!n)return;saveFolders([...new Set([...foldersOf(),n])]);folder=n;curFolder=n;list();toast(`Folder "${n}" added: designs you save now go in it`)};
 function download(name,obj){const a=document.createElement('a');a.download=name;a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,1)],{type:'application/json'}));a.click()}
@@ -351,7 +362,9 @@ $('png').onclick=()=>{const k=Math.max(8,Math.round(512/N)),c=document.createEle
   const a=document.createElement('a');a.download=slug($('fName').value)+'.png';a.href=c.toDataURL('image/png');a.click()};
 
 // ---- submit to the project's repo (a GitHub issue picked up by its art intake action) ----
-async function submit(draft){if(!P.repo||!ready2())return;const d=encode(),code=JSON.stringify(d);
+async function submit(draft){if(!P.repo||!ready2())return;const d=encode(),code=JSON.stringify(d);if(!nameOk(d)||!clashOk(d))return;
+  if(!draft&&LIB&&LIB.includes(d.id)&&!confirm(`This replaces "${d.name}", which is already in the app, with this version. Go ahead?\n\nCancel and change the name to add it as a new head instead.`))return;
+  curId=d.id;curName=d.name;
   const title=`${draft?'Art draft':'Art'}: ${d.name}`,lead=draft?'Save this design as a draft in the repo (not added to the app).':'Add this design to the app.';
   const mk=b=>`https://github.com/${P.repo}/issues/new?labels=${draft?'art-draft':'art'}&title=${encodeURIComponent(title)}&body=${encodeURIComponent(b)}`;
   let url=mk(`${lead}\n\n\`\`\`json\n${code}\n\`\`\`\n\n_Sent from Pixel Studio. Press **Submit new issue**; the art intake checks it and replies within a minute._`);
@@ -361,6 +374,7 @@ async function submit(draft){if(!P.repo||!ready2())return;const d=encode(),code=
 $('submit').onclick=()=>submit(false);$('submitDraft').onclick=()=>submit(true);
 
 async function repoDrafts(){if(!P.drafts)return;try{const r=await fetch(P.drafts,{cache:'no-cache'});DRAFTS=r.ok?await r.json():[];
+  DRAFTS=(Array.isArray(DRAFTS)?DRAFTS:[]).filter(d=>{try{decode(d);return true}catch(_){return false}});
   $('repoDrafts').innerHTML=DRAFTS.length?DRAFTS.map((d,i)=>`<div class="it"><div class="av">${svgOf(decode(d))}</div><b>${esc(d.name)}<small>${esc(meta(d))}</small></b><button class="tb" data-rd="${i}">Open</button></div>`).join(''):'<p class="note" style="margin:0">No drafts in the repo yet.</p>';
   document.querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>openD(DRAFTS[+b.dataset.rd]))}catch(_){$('repoDrafts').innerHTML='<p class="note" style="margin:0">Couldn\'t load the repo drafts.</p>'}}
 
@@ -369,8 +383,18 @@ function migrate(){if(!P.legacyKey)return;const flag=KEY+'.migrated';try{if(loca
   const old=JSON.parse(localStorage.getItem(P.legacyKey)||'[]'),oldF=JSON.parse(localStorage.getItem(P.legacyKey+'.folders')||'[]'),cur=store();
   const add=old.filter(d=>!cur.some(c=>c.id===d.id));if(add.length){keep([...cur,...add]);toast(`Brought over ${add.length} design${add.length>1?'s':''} from HL Studio`)}
   if(oldF.length)saveFolders([...new Set([...foldersOf(),...oldF])]);localStorage.setItem(flag,'1')}catch(_){}}
-function loadEngine(src){return new Promise(res=>{const f=document.createElement('iframe');f.title='engine';f.src=src;document.body.appendChild(f);let done=false;const t0=Date.now();
-  const tick=()=>{if(done)return;let w=null;try{w=f.contentWindow&&f.contentWindow.HL_ART}catch(_){}if(w&&w.build){done=true;return res(w)}if(Date.now()-t0>15000){done=true;return res(null)}setTimeout(tick,150)};
+/* The engine is the whole app running in a hidden frame. It must never touch the app's real saved data:
+   the app saves on every render and re-renders every minute, so a hidden copy would overwrite progress
+   made in the real app. So the page is fetched and run with its own throwaway, in-memory storage. */
+const ENGINE_GUARD=`<script>(()=>{const m=new Map(),s={getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>{m.set(String(k),String(v))},removeItem:k=>{m.delete(k)},clear:()=>m.clear(),key:i=>[...m.keys()][i]??null,get length(){return m.size}};
+  for(const n of['localStorage','sessionStorage'])Object.defineProperty(window,n,{value:s,configurable:true});
+  try{Object.defineProperty(navigator,'serviceWorker',{value:undefined,configurable:true})}catch(_){}
+  try{if(navigator.storage)navigator.storage.persist=()=>Promise.resolve(false)}catch(_){}})()<\/script>`;
+async function loadEngine(src){let html;try{const r=await fetch(src,{cache:'no-cache'});if(!r.ok)return null;html=await r.text()}catch(_){return null}
+  const dir=new URL(src,location.href).href.replace(/[^/]*$/,'');
+  html=html.replace(/<head[^>]*>/i,m=>`${m}<base href="${dir}">${ENGINE_GUARD}`);
+  return new Promise(res=>{const f=document.createElement('iframe');f.title='engine';f.srcdoc=html;document.body.appendChild(f);let done=false;const t0=Date.now();
+  const tick=()=>{if(done)return;let w=null;try{w=f.contentWindow&&f.contentWindow.HL_ART}catch(_){}if(w&&w.svg){done=true;return res(w)}if(Date.now()-t0>15000){done=true;return res(null)}setTimeout(tick,150)};
   f.addEventListener('load',tick);setTimeout(tick,500)})}
 const engines={};
 async function openProject(id){PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID];KEY=`${BASE_KEY}.${PID}`;try{localStorage.setItem(BASE_KEY+'.project',PID)}catch(_){}
@@ -379,11 +403,12 @@ async function openProject(id){PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID
   ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];
     if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
   $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
-  $('kitCard').hidden=!(ART&&ART.parts);$('headStart').hidden=!ART;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
+  $('kitCard').hidden=!(ART&&ART.parts&&ART.build);$('headStart').hidden=!ART;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
   $('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
   $('fName').placeholder=P.type==='head'?'e.g. Sky Hook':'e.g. Club badge';
   $('size').innerHTML=P.sizes.map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=P.sizes.length<2;
-  if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${h.id}">${esc(h.n)}</option>`).join('');if(ART.parts)setupKit()}
+  if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${esc(h.id)}">${esc(h.n)}</option>`).join('');if(ART.parts&&ART.build)setupKit()}
+  LIB=null;if(P.library)fetch(P.library,{cache:'no-cache'}).then(r=>r.ok?r.json():[]).then(l=>{if(Array.isArray(l))LIB=l.map(x=>x.id)}).catch(()=>{});
   hist=[];fut=[];curId=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';
   setGrid(ART&&ART.base?ART.base(2,'std'):empty(P.sizes.includes(32)?32:P.sizes[0]));$('size').value=N;
   migrate();$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
