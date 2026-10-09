@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pixel Studio</title>
+<meta name="theme-color" content="#0b1020">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%230b1020'/%3E%3Crect x='1' y='1' width='3' height='3' fill='%23ff7a1a'/%3E%3Crect x='4' y='1' width='3' height='3' fill='%2322c55e'/%3E%3Crect x='1' y='4' width='3' height='3' fill='%233b82f6'/%3E%3Crect x='4' y='4' width='3' height='3' fill='%23fbbf24'/%3E%3C/svg%3E">
+<style>
+@font-face{font-family:"Press Start 2P";src:url(fonts/press-start-2p-latin-400-normal.woff2) format("woff2");font-display:swap}
+:root{--bg:#0b1020;--panel:#141b2e;--panel2:#1a2340;--line:#26304d;--text:#eef2ff;--muted:#8d96b5;--orange:#ff7a1a;--well:#0c1226;--green:#22c55e}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+.wrap{max-width:1280px;margin:0 auto;padding:14px 16px 40px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+header h1{font-family:"Press Start 2P",monospace;font-weight:400;font-size:15px;margin:0;letter-spacing:.02em;text-shadow:2px 2px 0 #c2410c}
+header .sp{flex:1}
+header a{color:var(--muted);font-size:13px}
+#proj{width:auto;padding:6px 10px;font-weight:800}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+.card+.card{margin-top:14px}
+.card h2{font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tb{padding:7px 11px;border-radius:10px;background:var(--well);border:1px solid var(--line);font-size:13px;font-weight:700}
+.tb.on{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 18%,var(--well))}
+.tb:disabled{opacity:.4}
+.tb kbd{font:10px ui-monospace,monospace;color:var(--muted);margin-left:4px}
+#cv{width:100%;max-width:560px;aspect-ratio:1;display:block;margin:0 auto;touch-action:none;border-radius:10px;background:#0f1424;cursor:crosshair}
+@media (min-width:1100px){#cv{max-width:720px}}
+.pal{display:flex;flex-wrap:wrap;gap:5px}
+.sw{width:28px;height:28px;border-radius:7px;border:2px solid rgba(255,255,255,.12);padding:0}
+.sw.on{border-color:#fff;box-shadow:0 0 0 2px var(--orange)}
+.pal-l{font-size:11px;color:var(--muted);margin:8px 0 4px;font-weight:700}
+.cur{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--muted)}
+.cur .sw{width:36px;height:36px}
+.prev{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.av{border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#232c4a,#0c1226);border:1px solid var(--line);display:grid;place-items:center}
+.av svg{width:100%;height:100%;display:block}
+.big{width:150px;height:150px}.sm{width:52px;height:52px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin:8px 0 3px}
+input,select,textarea{width:100%;background:var(--well);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+input[type=file]{padding:6px}
+textarea{min-height:110px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+.btn{padding:9px 14px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);font-weight:800}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#1a1000}
+.btn.go{background:var(--green);border-color:var(--green);color:#052e16}
+.list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto}
+.it{display:flex;align-items:center;gap:8px;padding:6px;border-radius:10px;background:var(--well);border:1px solid var(--line)}
+.it .av{width:40px;height:40px;flex:none}.it b{flex:1;font-size:13px;min-width:0}.it small{color:var(--muted);font-size:11px;display:block;font-weight:400}
+.it select{width:auto;padding:4px 6px;font-size:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{padding:4px 10px;border-radius:99px;background:var(--well);border:1px solid var(--line);font-size:12px;font-weight:700}
+.chip.on{border-color:var(--orange);color:var(--orange)}
+.note{font-size:12px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
+.xs{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.xs label{display:flex;align-items:center;gap:4px;margin:0;padding:4px 8px;border-radius:99px;background:var(--well);border:1px solid var(--line);font-size:12px;color:var(--text);cursor:pointer}
+.xs input{width:auto;margin:0}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);margin:10px 0 0}
+.chk input{width:auto;margin:0}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#eef2ff;color:#0b1020;font-weight:800;padding:9px 16px;border-radius:99px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+.banner{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px;color:var(--muted);margin-bottom:12px}
+#loading{padding:40px;text-align:center;color:var(--muted)}
+iframe{position:absolute;width:390px;height:844px;left:-9999px;top:0;border:0;visibility:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Pixel Studio</h1><select id="proj" aria-label="Project"></select><span class="note" id="projNote"></span><span class="sp"></span><a id="appLink" href="#" target="_blank" rel="noopener">Open the app →</a></header>
+  <div class="banner" id="banner" hidden></div>
+  <div id="loading">Loading…</div>
+  <div id="ui" hidden>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="tools">
+          <button class="tb on" data-tool="pen">✏️ Pen<kbd>B</kbd></button><button class="tb" data-tool="erase">🧽 Erase<kbd>E</kbd></button><button class="tb" data-tool="fill">🪣 Fill<kbd>G</kbd></button><button class="tb" data-tool="pick">💧 Pick<kbd>I</kbd></button>
+          <button class="tb" id="mirror">↔ Mirror<kbd>M</kbd></button><button class="tb" id="gridT">Grid</button>
+          <button class="tb" id="undo">↶ Undo<kbd>Ctrl Z</kbd></button><button class="tb" id="redo">↷ Redo<kbd>Ctrl Y</kbd></button>
+        </div>
+        <canvas id="cv" width="768" height="768"></canvas>
+        <p class="note" id="cvNote" style="margin:8px 2px 0"></p>
+      </div>
+      <div class="card">
+        <h2>Colours</h2>
+        <div id="pals"></div>
+        <div class="cur"><span class="sw on" id="curSw"></span><span id="curHex"></span><input type="color" id="custom" style="width:46px;height:36px;padding:2px"><span>Custom</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2 id="pvTitle">Preview</h2>
+        <div class="prev"><div class="av big" id="pvBig"></div><div><div class="row" id="pvRow"></div><p class="note" id="pvNote" style="margin:6px 0 0"></p></div></div>
+        <label class="chk" id="outlineWrap"><input type="checkbox" id="outline" checked> Auto outline</label>
+      </div>
+      <div class="card" id="kitCard">
+        <h2>Parts kit</h2>
+        <div class="two">
+          <div><label>Skin</label><select id="kSkin"></select></div>
+          <div><label>Head shape</label><select id="kShape"></select></div>
+          <div><label>Hairstyle</label><select id="kStyle"></select></div>
+          <div><label>Hair colour</label><select id="kHair"></select></div>
+          <div><label>Headband</label><select id="kBand"></select></div>
+          <div><label>Mouth</label><select id="kMouth"></select></div>
+        </div>
+        <label>Extras</label><div class="xs" id="kExtras"></div>
+        <div class="row" style="margin-top:10px;align-items:flex-end"><div class="av sm" id="kPrev"></div>
+          <button class="btn primary" id="kBuild">Build head</button><button class="btn" id="kStamp">Stamp onto drawing</button></div>
+        <p class="note" style="margin:6px 0 0"><b>Build</b> replaces the grid with a head made from these parts. <b>Stamp</b> adds just the hair, headband, mouth and extras on top of what you've drawn.</p>
+      </div>
+      <div class="card">
+        <h2>Start from</h2>
+        <div class="row"><select id="size" style="width:auto"></select><button class="btn" id="startEmpty">Empty grid</button></div>
+        <div id="headStart"><label>An existing head</label>
+        <div class="row"><select id="baseHead" style="flex:1"></select><button class="btn" id="startHead">Load</button></div></div>
+        <label>An image (AI art, a drawing or a photo)</label>
+        <input type="file" id="imgFile" accept="image/*">
+        <div class="two">
+          <div><label>Colours</label><select id="imgPal"><option value="snap">Snap to the palette</option><option value="keep">Keep its own colours</option></select></div>
+          <div><label>Background</label><select id="imgBg"><option value="auto">Remove (auto)</option><option value="keep">Keep</option></select></div>
+        </div>
+        <p class="note" style="margin:6px 0 0">The image is cropped to the subject, shrunk to the grid and cleaned up. It's a starting point to tidy by hand.</p>
+      </div>
+      <div class="card">
+        <h2>Details</h2>
+        <label>Name</label><input id="fName" placeholder="e.g. Sky Hook" maxlength="20">
+        <div class="row" id="hlFields"><div style="flex:1"><label>Rarity</label><select id="fRar"><option value="rare">Rare · 49p</option><option value="epic" selected>Epic · 79p</option><option value="leg">Legendary · 99p</option></select></div>
+          <div style="flex:1"><label>Where</label><select id="fWhere"><option value="shop">Shop pool</option><option value="none">Held back</option></select></div></div>
+        <div class="row" style="margin-top:10px"><button class="btn primary" id="save">💾 Save</button><button class="btn" id="export">📋 Copy code</button><button class="btn" id="png">🖼 PNG</button><button class="btn" id="dl">⬇ File</button></div>
+        <div id="submitRow"><div class="row" style="margin-top:8px"><button class="btn go" id="submit">🚀 Submit to app</button><button class="btn" id="submitDraft">☁ Save draft to repo</button></div>
+        <p class="note" style="margin:6px 0 0"><b>Submit to app</b> opens a ready-made GitHub issue: press <i>Submit new issue</i> and it's checked, added and live in about a minute. <b>Save draft to repo</b> keeps it in the repo without adding it to the app, so you can open it on any device.</p></div>
+      </div>
+      <div class="card">
+        <h2>My designs</h2>
+        <div class="chips" id="folders"></div>
+        <div class="list" id="list"></div>
+        <div class="row" style="margin-top:8px"><button class="btn" id="newFolder">+ Folder</button><button class="btn" id="dlFolder">⬇ Download folder</button><label class="btn" style="margin:0;color:var(--text);font-size:15px">📂 Open file<input type="file" id="openFile" accept=".json,application/json" hidden></label></div>
+        <p class="note">Saved in this browser, separately for each project. <b>Download folder</b> saves a folder as a file you can keep anywhere, and <b>Open file</b> loads it back on any device.</p>
+      </div>
+      <div class="card" id="draftCard">
+        <h2>Repo drafts</h2>
+        <div class="list" id="repoDrafts"><p class="note" style="margin:0">Loading…</p></div>
+        <p class="note">Saved to the repo with <b>Save draft to repo</b>. Not in the app until you submit them.</p>
+      </div>
+      <div class="card">
+        <h2>Code</h2>
+        <textarea id="code" placeholder="Paste a design's code here to load it, or press Copy code to fill this in."></textarea>
+        <div class="row" style="margin-top:6px"><button class="btn" id="import">Load from code</button></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+/* ---------------------------------------------------------------------------
+   Projects. Each one is an app Pixel Studio makes art for.
+   engine: a page on the same site that sets window.HL_ART (the app's own drawing code).
+   repo:   GitHub repo with an art intake action (labels art / art-draft).
+   To add the football app later, add an entry here: see README.md.
+--------------------------------------------------------------------------- */
+const PROJECTS={
+  'habit-league':{name:'Habit League',note:'Player heads',type:'head',sizes:[32],outline:'always',fields:true,
+    engine:'/habit-league/index.html',app:'/habit-league/',repo:'Krismcnulty/habit-league',drafts:'/habit-league/art/drafts.json',legacyKey:'hlStudio.v1',
+    cvNote:'Draw on the 32×32 grid. Leave the background empty: the dark outline is added automatically, exactly as the app does. Mirror copies each pixel to the other side of the face. Right-click erases on a computer.',
+    pvTitle:'Preview (as the app draws it)',pvNote:'Card size, next to existing heads'},
+  'sketchbook':{name:'Sketchbook',note:'Anything else: football badges, kits, ideas',type:'sprite',sizes:[16,24,32,48,64],outline:'toggle',fields:false,
+    cvNote:'Free drawing at any size. Turn Auto outline on for a dark 1-pixel outline like the game art. Mirror copies each pixel to the other side. Right-click erases on a computer.',
+    pvTitle:'Preview',pvNote:'Small size'}
+};
+const BASE_KEY='pixelStudio.v1';
+const DEF_PAL={
+  skin:['#fadec6','#f8d6b8','#f6d2b4','#c89475','#8c6550','#f5d2b2','#f1c49e','#eebd94','#bf845f','#855a40','#e5bd99','#dba87c','#d39a6a','#a56b44','#74492e',
+        '#cba47f','#b88558','#a8703f','#874f2c','#5f351d','#a36f47','#8b5936','#7a4b2a','#65381f','#482514','#8e603b','#714728','#5a3519','#502814','#391b0d'],
+  hair:['#4d4641','#1b120c','#120c08','#665449','#3b2416','#26170e','#8c6850','#6b3e1f','#462814','#d5a55c','#c98b2e','#835a1e','#edd08b','#e8c36a','#977f45',
+        '#c56d4d','#b4441b','#752c12','#a7a7a7','#8e8e8e','#5c5c5c','#595965','#2a2a3a','#1b1b26'],
+  ink:['#ffffff','#f4f1ea','#1d130c','#140b06','#3a0f0a','#7f1d1d','#e7e2c0','#f8f5ee'],
+  accents:['#fde68a','#fbbf24','#d97706','#fca5a5','#ef4444','#991b1b','#86efac','#22c55e','#15803d','#7dd3fc','#3b82f6','#1e3a8a','#c4b5fd','#a855f7','#6b21a8','#f9a8d4','#ec4899','#e5e7eb','#cbd5e1','#64748b','#334155','#111827'],
+  e32:['#be4a2f','#d77643','#ead4aa','#e4a672','#b86f50','#733e39','#3e2731','#a22633','#e43b44','#f77622','#feae34','#fee761','#63c74d','#3e8948','#265c42','#193c3e',
+       '#124e89','#0099db','#2ce8f5','#ffffff','#c0cbdc','#8b9bb4','#5a6988','#3a4466','#262b44','#181425','#ff0044','#68386c','#b55088','#f6757a','#e8b796','#c28569'],
+  pitch:['#4ade80','#22c55e','#16a34a','#15803d','#166534','#f8fafc','#e2e8f0','#facc15','#000000']
+};
+const OUTLINE='#140b06';
+
+let PID,P,KEY,ART=null,N=32,grid,tool='pen',mirror=false,showGrid=true,color='#d39a6a',hist=[],fut=[],curId=null,folder='All',curFolder='Unsorted',DRAFTS=[];
+const $=id=>document.getElementById(id);
+const empty=(n=N)=>Array.from({length:n},()=>Array(n).fill(null));
+const clone=g=>g.map(r=>r.slice());
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2400)}
+const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const toHex=([r,g,b])=>'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+function cdist([r1,g1,b1],[r2,g2,b2]){const rm=(r1+r2)/2,dr=r1-r2,dg=g1-g2,db=b1-b2;return Math.sqrt((2+rm/256)*dr*dr+4*dg*dg+(2+(255-rm)/256)*db*db)}
+const N4=[[1,0],[-1,0],[0,1],[0,-1]];
+const useOutline=()=>P.outline==='always'||(P.outline==='toggle'&&$('outline').checked);
+function setGrid(g){grid=g;N=g.length}
+
+// ---- built-in renderer (used when there's no app engine, or for non-head sizes) ----
+function basicSvg(G,outline=useOutline()){const n=G.length,out=G.map(r=>r.slice());
+  if(outline)for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(!G[y][x]&&N4.some(([a,b])=>G[y+b]&&G[y+b][x+a]))out[y][x]=OUTLINE;
+  let x0=n,y0=n,x1=-1,y1=-1;for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(out[y][x]){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}
+  if(x1<0)return`<svg viewBox="0 0 ${n} ${n}"></svg>`;
+  const side=Math.max(x1-x0,y1-y0)+3,ox=(x0+x1+1)/2-side/2,oy=(y0+y1+1)/2-side/2;let r='';
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(out[y][x])r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${out[y][x]}"/>`;
+  return`<svg viewBox="${ox} ${oy} ${side} ${side}" shape-rendering="crispEdges">${r}</svg>`}
+const svgOf=G=>(ART&&P.type==='head'&&G.length===32)?ART.svg(G):basicSvg(G,P.outline==='always'||!!G.outline||useOutline());
+
+// ---- drawing ----
+const cv=$('cv'),cx=cv.getContext('2d');
+function draw(){const W=cv.width,s=W/N,R=v=>Math.round(v);cx.clearRect(0,0,W,W);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){cx.fillStyle=(x+y)%2?'#121a30':'#0f1628';cx.fillRect(R(x*s),R(y*s),R((x+1)*s)-R(x*s),R((y+1)*s)-R(y*s))}
+  if(useOutline())for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!grid[y][x]&&N4.some(([dx,dy])=>grid[y+dy]&&grid[y+dy][x+dx])){cx.fillStyle='rgba(20,11,6,.85)';cx.fillRect(R(x*s),R(y*s),R((x+1)*s)-R(x*s),R((y+1)*s)-R(y*s))}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){cx.fillStyle=grid[y][x];cx.fillRect(R(x*s),R(y*s),R((x+1)*s)-R(x*s),R((y+1)*s)-R(y*s))}
+  if(showGrid&&N<=64){cx.strokeStyle='rgba(255,255,255,.07)';cx.lineWidth=1;for(let i=1;i<N;i++){const p=R(i*s)+.5;cx.beginPath();cx.moveTo(p,0);cx.lineTo(p,W);cx.stroke();cx.beginPath();cx.moveTo(0,p);cx.lineTo(W,p);cx.stroke()}
+    cx.strokeStyle='rgba(255,122,26,.25)';cx.beginPath();cx.moveTo(W/2,0);cx.lineTo(W/2,W);cx.stroke()}
+  preview()}
+function preview(){const svg=svgOf(grid);$('pvBig').innerHTML=svg;
+  const others=ART&&P.type==='head'?['hothand','enforcer','oldtimer'].filter(id=>ART.heads().some(h=>h.id===id)):[];
+  $('pvRow').innerHTML=`<div class="av sm">${svg}</div>`+others.map(id=>`<div class="av sm">${ART.svg(ART.headGrid(id))}</div>`).join('')}
+function push(){hist.push(clone(grid));if(hist.length>80)hist.shift();fut=[];btns()}
+function btns(){$('undo').disabled=!hist.length;$('redo').disabled=!fut.length}
+function setPx(x,y,c){if(x<0||y<0||x>=N||y>=N)return;grid[y][x]=c;if(mirror)grid[y][N-1-x]=c}
+function fill(x,y,c){const t=grid[y][x];if(t===c)return;const q=[[x,y]];while(q.length){const [a,b]=q.pop();if(a<0||b<0||a>=N||b>=N||grid[b][a]!==t)continue;grid[b][a]=c;q.push([a+1,b],[a-1,b],[a,b+1],[a,b-1])}}
+function cell(e){const r=cv.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*N),Math.floor((e.clientY-r.top)/r.height*N)]}
+let down=false,last=null,erasing=false;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);const [x,y]=cell(e);erasing=e.button===2||tool==='erase';
+  if(tool==='pick'&&!erasing){if(grid[y]&&grid[y][x]){setColor(grid[y][x]);tool='pen';tools()}return}
+  push();if(tool==='fill'&&!erasing){fill(x,y,color);draw();palettes();return}down=true;last=[x,y];setPx(x,y,erasing?null:color);draw()});
+cv.addEventListener('pointermove',e=>{if(!down)return;const [x,y]=cell(e);if(last&&x===last[0]&&y===last[1])return;
+  const [x0,y0]=last,n=Math.max(Math.abs(x-x0),Math.abs(y-y0));for(let i=1;i<=n;i++)setPx(Math.round(x0+(x-x0)*i/n),Math.round(y0+(y-y0)*i/n),erasing?null:color);last=[x,y];draw()});
+addEventListener('pointerup',()=>{if(down)palettes();down=false;last=null});
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;tools()});
+function tools(){document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===tool));$('mirror').classList.toggle('on',mirror);$('gridT').classList.toggle('on',showGrid)}
+$('mirror').onclick=()=>{mirror=!mirror;tools()};$('gridT').onclick=()=>{showGrid=!showGrid;tools();draw()};
+$('undo').onclick=()=>{if(!hist.length)return;fut.push(clone(grid));setGrid(hist.pop());btns();draw();palettes()};
+$('redo').onclick=()=>{if(!fut.length)return;hist.push(clone(grid));setGrid(fut.pop());btns();draw();palettes()};
+$('outline').onchange=()=>draw();
+addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const k=e.key.toLowerCase();
+  if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();(e.shiftKey?$('redo'):$('undo')).onclick();return}
+  if((e.ctrlKey||e.metaKey)&&k==='y'){e.preventDefault();$('redo').onclick();return}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const T={b:'pen',p:'pen',e:'erase',g:'fill',f:'fill',i:'pick'};if(T[k]){tool=T[k];tools()}else if(k==='m'){mirror=!mirror;tools()}});
+
+// ---- colours ----
+function setColor(c){color=c;$('curSw').style.background=c;$('curHex').textContent=c;$('custom').value=c;document.querySelectorAll('.pal .sw').forEach(s=>s.classList.toggle('on',s.dataset.c===c))}
+$('custom').oninput=e=>setColor(e.target.value);
+function palGroups(){const head=[['Skin (5 tones each: highlight → deep shadow)',DEF_PAL.skin],['Hair (3 tones each)',DEF_PAL.hair],['Eyes, mouth and outline',DEF_PAL.ink],['Accents',DEF_PAL.accents]];
+  return P.type==='head'?head:[['General (Endesga 32)',DEF_PAL.e32],['Pitch and kit',DEF_PAL.pitch],...head]}
+function palettes(){const groups=palGroups(),used=[...new Set(grid.flat().filter(Boolean))];if(used.length)groups.unshift(['In this design',used]);
+  $('pals').innerHTML=groups.map(([l,cs])=>`<div class="pal-l">${l}</div><div class="pal">${cs.map(c=>`<button class="sw" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('')}</div>`).join('');
+  document.querySelectorAll('.pal .sw').forEach(b=>b.onclick=()=>setColor(b.dataset.c));setColor(color)}
+
+// ---- parts kit (only when the app engine has one) ----
+const NAMES={bald:'Bald',buzz:'Buzz cut',short:'Short',flat:'Flat top',curly:'Curly',coils:'Tight curls',spiky:'Spiky',mohawk:'Mohawk',afro:'Afro',topknot:'Top knot',long:'Long',horseshoe:'Balding (sides)',
+  smile:'Smile',grin:'Grin',open:'Open',beard:'Full beard',stache:'Moustache',thinstache:'Thin moustache',goatee:'Goatee',vandyke:'Chin beard',glasses:'Glasses',shades:'Shades',goggles:'Goggles',sportspecs:'Sports goggles',scowl:'Scowl',cap:'Backwards cap',lephat:'Top hat',crown:'Crown'};
+function kit(){return{skin:+$('kSkin').value,shape:$('kShape').value,style:$('kStyle').value,hair:$('kHair').value,band:$('kBand').value,mouth:$('kMouth').value,fx:[...document.querySelectorAll('#kExtras input:checked')].map(i=>i.value)}}
+function kitPrev(){$('kPrev').innerHTML=ART.svg(ART.build(kit()))}
+function setupKit(){const K=ART.parts;
+  $('kSkin').innerHTML=ART.skins.map((s,i)=>`<option value="${i}">Skin ${i+1}</option>`).join('');$('kSkin').value='2';
+  $('kShape').innerHTML=ART.shapes.map(s=>`<option value="${s}">${s[0].toUpperCase()+s.slice(1)}</option>`).join('');
+  $('kStyle').innerHTML=K.styles.map(s=>`<option value="${s}">${NAMES[s]||s}</option>`).join('');$('kStyle').value='short';
+  const HN=['Black','Dark brown','Brown','Ginger blonde','Blonde','Auburn','Grey','Blue-black'];
+  $('kHair').innerHTML=ART.hairs.map((h,i)=>`<option value="${h}">${HN[i]||h}</option>`).join('')+'<option value="#e5e7eb">White</option>';
+  $('kBand').innerHTML=K.bands.map(b=>`<option value="${b}">${b==='none'?'None':b}</option>`).join('');
+  $('kMouth').innerHTML=K.mouths.map(m=>`<option value="${m}">${m==='flat'?'Straight':NAMES[m]||m}</option>`).join('');
+  $('kExtras').innerHTML=K.extras.map(x=>`<label><input type="checkbox" value="${x}">${NAMES[x]||x}</label>`).join('');
+  document.querySelectorAll('#kSkin,#kShape,#kStyle,#kHair,#kBand,#kMouth,#kExtras input').forEach(el=>el.onchange=kitPrev);kitPrev()}
+$('kBuild').onclick=()=>{load(ART.build(kit()));curId=null;toast('Built: now make it your own')};
+$('kStamp').onclick=()=>{if(N!==32)return toast('Stamping needs a 32×32 grid');const o=kit(),A=ART.build(o),B=ART.build({...o,style:'bald',band:'none',mouth:'flat',fx:[]});push();let n=0;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(A[y][x]!==B[y][x]&&A[y][x]){grid[y][x]=A[y][x];n++}
+  draw();palettes();toast(n?'Parts stamped on':'Pick a hairstyle, headband, mouth or extra to stamp')};
+
+// ---- start points ----
+function load(g){push();setGrid(clone(g));$('size').value=N;draw();palettes()}
+$('startEmpty').onclick=()=>{load(empty(+$('size').value));curId=null};
+$('startHead').onclick=()=>{load(ART.headGrid($('baseHead').value));curId=null;toast('Loaded: edit away, then save it under a new name')};
+
+// ---- image import: crop to the subject, shrink to the grid, snap colours, tidy ----
+$('imgFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();img.onload=()=>{try{load(fromImage(img,+$('size').value));curId=null;toast('Imported: tidy it up by hand')}catch(err){toast(err.message)}};img.onerror=()=>toast("Couldn't read that image");img.src=URL.createObjectURL(f)};
+function fromImage(img,n){
+  const W=Math.min(img.naturalWidth,800),H=Math.round(img.naturalHeight*W/img.naturalWidth),c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(img,0,0,W,H);
+  const D=x.getImageData(0,0,W,H).data,px=(i,j)=>{const o=(j*W+i)*4;return[D[o],D[o+1],D[o+2],D[o+3]]};
+  const removeBg=$('imgBg').value==='auto',corners=[px(2,2),px(W-3,2),px(2,H-3),px(W-3,H-3)],bg=[0,1,2].map(k=>corners.reduce((a,c)=>a+c[k],0)/4);
+  const isBg=p=>p[3]<100||(removeBg&&cdist(p,bg)<60);
+  let x0=W,y0=H,x1=0,y1=0;for(let j=0;j<H;j+=2)for(let i=0;i<W;i+=2)if(!isBg(px(i,j))){x0=Math.min(x0,i);y0=Math.min(y0,j);x1=Math.max(x1,i);y1=Math.max(y1,j)}
+  if(x1<=x0)throw new Error('Nothing found in that image');
+  const m=n-2,side=Math.max(x1-x0,y1-y0)*1.02,sx=(x0+x1)/2-side/2,sy=(y0+y1)/2-side/2,cs=side/m,G=empty(n);
+  for(let gy=0;gy<m;gy++)for(let gx=0;gx<m;gx++){let r=0,g=0,b=0,k=0,tot=0;
+    for(let j=Math.floor(sy+gy*cs);j<sy+(gy+1)*cs;j++)for(let i=Math.floor(sx+gx*cs);i<sx+(gx+1)*cs;i++){if(i<0||j<0||i>=W||j>=H)continue;tot++;const p=px(i,j);if(isBg(p))continue;r+=p[0];g+=p[1];b+=p[2];k++}
+    if(k&&k/Math.max(1,tot)>.45)G[gy+1][gx+1]=[r/k,g/k,b/k]}
+  if($('imgPal').value==='snap'){const PAL=palGroups().flatMap(g=>g[1]).map(h=>[h,rgb(h)]);for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]){let best=null,bd=1e9;for(const [h,c] of PAL){const d=cdist(G[y][i],c);if(d<bd){bd=d;best=h}}G[y][i]=best}}
+  else{const keep=[];for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]){let mm=keep.find(k=>cdist(k,G[y][i])<26);if(!mm){mm=G[y][i];keep.push(mm)}G[y][i]=toHex(mm)}}
+  for(let y=0;y<n;y++)for(let i=0;i<n;i++)if(G[y][i]&&N4.filter(([a,b])=>G[y+b]&&G[y+b][i+a]).length<=1)G[y][i]=null;
+  return G}
+
+// ---- designs: encode, store, folders ----
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,16)||'art';
+function encode(){const cols=[...new Set(grid.flat().filter(Boolean))],L='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  if(cols.length>L.length)throw new Error('Too many colours (max 62)');const pal={};cols.forEach((c,i)=>pal[L[i]]=c);const inv=Object.fromEntries(Object.entries(pal).map(([k,v])=>[v,k]));
+  const name=$('fName').value.trim()||'Untitled',d={type:P.type,id:curId||slug(name),name};
+  if(P.fields){d.rarity=$('fRar').value;d.where=$('fWhere').value}
+  if(P.outline==='toggle')d.outline=$('outline').checked;
+  d.pal=pal;d.px=grid.map(r=>r.map(c=>c?inv[c]:'.').join(''));return d}
+function decode(d){if(!d||!Array.isArray(d.px)||d.px.length<8||d.px.length>64||d.px.some(r=>r.length!==d.px.length))throw new Error('bad');
+  const g=d.px.map(r=>[...r].map(c=>c==='.'?null:(d.pal[c]||null)));g.outline=d.outline;return g}
+const strip=d=>{const o={...d};delete o.folder;delete o.saved;return o};
+const store=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(_){return[]}};
+const keep=l=>{try{localStorage.setItem(KEY,JSON.stringify(l))}catch(_){toast('Could not save in this browser')}};
+const foldersOf=()=>{let f=[];try{f=JSON.parse(localStorage.getItem(KEY+'.folders'))||[]}catch(_){}return[...new Set(['Unsorted',...f,...store().map(d=>d.folder||'Unsorted')])]};
+function saveFolders(f){try{localStorage.setItem(KEY+'.folders',JSON.stringify(f))}catch(_){}}
+const meta=d=>P.fields?`${d.rarity} · ${d.where==='shop'?'Shop pool':'held back'}`:`${d.px.length}×${d.px.length}`;
+function list(){const all=store(),F=foldersOf();
+  $('folders').innerHTML=['All',...F].map(f=>`<button class="chip ${folder===f?'on':''}" data-f="${esc(f)}">${esc(f)} ${f==='All'?all.length:all.filter(d=>(d.folder||'Unsorted')===f).length}</button>`).join('');
+  document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{folder=b.dataset.f;list()});
+  const shown=all.map((d,i)=>[d,i]).filter(([d])=>folder==='All'||(d.folder||'Unsorted')===folder);
+  $('list').innerHTML=shown.length?shown.map(([d,i])=>{let s='';try{s=svgOf(decode(d))}catch(_){}return`<div class="it"><div class="av">${s}</div><b>${esc(d.name)}<small>${esc(meta(d))}</small></b>
+    <select data-mv="${i}" aria-label="Folder">${F.map(f=>`<option ${(d.folder||'Unsorted')===f?'selected':''}>${esc(f)}</option>`).join('')}</select><button class="tb" data-open="${i}">Open</button><button class="tb" data-del="${i}" aria-label="Delete">✕</button></div>`}).join(''):'<p class="note" style="margin:0">Nothing here yet.</p>';
+  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openD(store()[+b.dataset.open]));
+  document.querySelectorAll('[data-mv]').forEach(s=>s.onchange=()=>{const l=store();l[+s.dataset.mv].folder=s.value;keep(l);list()});
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this design?'))return;const l=store();l.splice(+b.dataset.del,1);keep(l);list()})}
+function openD(d){const g=decode(d);if(P.type==='head'&&g.length!==32)return toast('Habit League heads must be 32×32');
+  load(g);curId=d.id;curFolder=d.folder||'Unsorted';$('fName').value=d.name||'';
+  if(P.fields){$('fRar').value=d.rarity||'epic';$('fWhere').value=d.where||'shop'}
+  if(P.outline==='toggle'){$('outline').checked=d.outline!==false;draw()}
+  $('code').value=JSON.stringify(strip(d))}
+const ready2=()=>{if(!grid.flat().some(Boolean)){toast('Draw something first');return false}if(!$('fName').value.trim()){toast('Give it a name first');$('fName').focus();return false}return true};
+const target=()=>folder!=='All'?folder:curFolder;
+$('save').onclick=()=>{if(!ready2())return;const d=encode();curId=d.id;const l=store().filter(x=>x.id!==d.id);
+  l.unshift({...d,folder:target(),saved:Date.now()});keep(l);list();$('code').value=JSON.stringify(d);toast(`Saved to ${target()}`)};
+$('newFolder').onclick=()=>{const n=(prompt('Folder name (e.g. Not ready, Halloween ideas)')||'').trim().slice(0,24);if(!n)return;saveFolders([...new Set([...foldersOf(),n])]);folder=n;curFolder=n;list();toast(`Folder "${n}" added: designs you save now go in it`)};
+function download(name,obj){const a=document.createElement('a');a.download=name;a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,1)],{type:'application/json'}));a.click()}
+$('dl').onclick=()=>{if(!ready2())return;const d=encode();download(`${d.id}.${PID}.json`,d)};
+$('dlFolder').onclick=()=>{const l=store().filter(d=>folder==='All'||(d.folder||'Unsorted')===folder);if(!l.length)return toast('Nothing in this folder');download(`${slug(folder)}.${PID}.json`,l)};
+$('openFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const d=JSON.parse(await f.text()),arr=Array.isArray(d)?d:[d];arr.forEach(decode);
+  const l=store();for(const x of arr){const i=l.findIndex(y=>y.id===x.id),v={...x,folder:x.folder||(folder!=='All'?folder:'Unsorted')};if(i>=0)l[i]=v;else l.push(v)}keep(l);list();if(arr.length===1)openD(arr[0]);toast(`Loaded ${arr.length} design${arr.length>1?'s':''}`)}catch(_){toast("That file isn't a Pixel Studio design")}};
+$('export').onclick=async()=>{if(!grid.flat().some(Boolean))return toast('Draw something first');const t=JSON.stringify(encode());$('code').value=t;
+  try{await navigator.clipboard.writeText(t);toast('Code copied')}catch(_){$('code').select();toast('Code is in the box below: copy it from there')}};
+$('import').onclick=()=>{try{const d=JSON.parse($('code').value);openD(Array.isArray(d)?d[0]:d);toast('Loaded')}catch(_){toast("That code isn't a Pixel Studio design")}};
+$('png').onclick=()=>{const k=Math.max(8,Math.round(512/N)),c=document.createElement('canvas');c.width=c.height=N*k;const x=c.getContext('2d');
+  const out=grid.map(r=>r.slice());if(useOutline())for(let y=0;y<N;y++)for(let i=0;i<N;i++)if(!grid[y][i]&&N4.some(([dx,dy])=>grid[y+dy]&&grid[y+dy][i+dx]))out[y][i]=OUTLINE;
+  for(let y=0;y<N;y++)for(let i=0;i<N;i++)if(out[y][i]){x.fillStyle=out[y][i];x.fillRect(i*k,y*k,k,k)}
+  const a=document.createElement('a');a.download=slug($('fName').value)+'.png';a.href=c.toDataURL('image/png');a.click()};
+
+// ---- submit to the project's repo (a GitHub issue picked up by its art intake action) ----
+async function submit(draft){if(!P.repo||!ready2())return;const d=encode(),code=JSON.stringify(d);
+  const title=`${draft?'Art draft':'Art'}: ${d.name}`,lead=draft?'Save this design as a draft in the repo (not added to the app).':'Add this design to the app.';
+  const mk=b=>`https://github.com/${P.repo}/issues/new?labels=${draft?'art-draft':'art'}&title=${encodeURIComponent(title)}&body=${encodeURIComponent(b)}`;
+  let url=mk(`${lead}\n\n\`\`\`json\n${code}\n\`\`\`\n\n_Sent from Pixel Studio. Press **Submit new issue**; the art intake checks it and replies within a minute._`);
+  if(url.length>7800){try{await navigator.clipboard.writeText(code)}catch(_){}url=mk(`${lead}\n\nPaste the code here between the lines:\n\n\`\`\`json\n\n\`\`\``);toast('Big design: the code is copied, paste it into the issue')}
+  const l=store().filter(x=>x.id!==d.id);l.unshift({...d,folder:draft?target():'Submitted',saved:Date.now()});keep(l);if(!draft){folder='Submitted';curFolder='Submitted'}list();
+  window.open(url,'_blank')}
+$('submit').onclick=()=>submit(false);$('submitDraft').onclick=()=>submit(true);
+
+async function repoDrafts(){if(!P.drafts)return;try{const r=await fetch(P.drafts,{cache:'no-cache'});DRAFTS=r.ok?await r.json():[];
+  $('repoDrafts').innerHTML=DRAFTS.length?DRAFTS.map((d,i)=>`<div class="it"><div class="av">${svgOf(decode(d))}</div><b>${esc(d.name)}<small>${esc(meta(d))}</small></b><button class="tb" data-rd="${i}">Open</button></div>`).join(''):'<p class="note" style="margin:0">No drafts in the repo yet.</p>';
+  document.querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>openD(DRAFTS[+b.dataset.rd]))}catch(_){$('repoDrafts').innerHTML='<p class="note" style="margin:0">Couldn\'t load the repo drafts.</p>'}}
+
+// ---- projects ----
+function migrate(){if(!P.legacyKey)return;const flag=KEY+'.migrated';try{if(localStorage.getItem(flag))return;
+  const old=JSON.parse(localStorage.getItem(P.legacyKey)||'[]'),oldF=JSON.parse(localStorage.getItem(P.legacyKey+'.folders')||'[]'),cur=store();
+  const add=old.filter(d=>!cur.some(c=>c.id===d.id));if(add.length){keep([...cur,...add]);toast(`Brought over ${add.length} design${add.length>1?'s':''} from HL Studio`)}
+  if(oldF.length)saveFolders([...new Set([...foldersOf(),...oldF])]);localStorage.setItem(flag,'1')}catch(_){}}
+function loadEngine(src){return new Promise(res=>{const f=document.createElement('iframe');f.title='engine';f.src=src;document.body.appendChild(f);let done=false;const t0=Date.now();
+  const tick=()=>{if(done)return;let w=null;try{w=f.contentWindow&&f.contentWindow.HL_ART}catch(_){}if(w&&w.build){done=true;return res(w)}if(Date.now()-t0>15000){done=true;return res(null)}setTimeout(tick,150)};
+  f.addEventListener('load',tick);setTimeout(tick,500)})}
+const engines={};
+async function openProject(id){PID=PROJECTS[id]?id:'habit-league';P=PROJECTS[PID];KEY=`${BASE_KEY}.${PID}`;try{localStorage.setItem(BASE_KEY+'.project',PID)}catch(_){}
+  $('proj').value=PID;$('projNote').textContent=P.note;$('ui').hidden=true;$('loading').hidden=false;$('banner').hidden=true;
+  $('loading').textContent=P.engine?`Loading ${P.name}'s drawing engine…`:'Loading…';
+  ART=null;if(P.engine){if(!(PID in engines))engines[PID]=loadEngine(P.engine);ART=await engines[PID];
+    if(!ART){$('banner').hidden=false;$('banner').textContent=`Couldn't load ${P.name}'s drawing engine, so the parts kit and existing heads are off and the preview is approximate. Drawing, saving and submitting still work.`}}
+  $('appLink').hidden=!P.app;if(P.app)$('appLink').href=P.app;
+  $('kitCard').hidden=!(ART&&ART.parts);$('headStart').hidden=!ART;$('hlFields').hidden=!P.fields;$('submitRow').hidden=!P.repo;$('draftCard').hidden=!P.drafts;
+  $('outlineWrap').hidden=P.outline!=='toggle';$('cvNote').textContent=P.cvNote;$('pvTitle').textContent=P.pvTitle;$('pvNote').textContent=P.pvNote;
+  $('fName').placeholder=P.type==='head'?'e.g. Sky Hook':'e.g. Club badge';
+  $('size').innerHTML=P.sizes.map(s=>`<option value="${s}">${s}×${s}</option>`).join('');$('size').hidden=P.sizes.length<2;
+  if(ART){$('baseHead').innerHTML=ART.heads().map(h=>`<option value="${h.id}">${esc(h.n)}</option>`).join('');if(ART.parts)setupKit()}
+  hist=[];fut=[];curId=null;folder='All';curFolder='Unsorted';$('fName').value='';$('code').value='';
+  setGrid(ART&&ART.base?ART.base(2,'std'):empty(P.sizes.includes(32)?32:P.sizes[0]));$('size').value=N;
+  migrate();$('loading').hidden=true;$('ui').hidden=false;tools();btns();palettes();draw();list();repoDrafts()}
+$('proj').innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
+$('proj').onchange=e=>openProject(e.target.value);
+let start='habit-league';try{start=new URLSearchParams(location.search).get('project')||localStorage.getItem(BASE_KEY+'.project')||start}catch(_){}
+openProject(start);
+</script>
+</body>
+</html>
